@@ -10,6 +10,14 @@ import {
     HttpCode,
     HttpStatus,
 } from '@nestjs/common';
+import {
+    ApiTags,
+    ApiOperation,
+    ApiResponse,
+    ApiParam,
+    ApiCookieAuth,
+    ApiBearerAuth,
+} from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { USERS_API } from './users.api';
 import {
@@ -23,6 +31,7 @@ import {
 } from './users.dto';
 import { CurrentUser, Public } from '../../common/decorators';
 
+@ApiTags('Users')
 @Controller(USERS_API.BASE)
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }
@@ -33,6 +42,18 @@ export class UsersController {
      */
     @Get('profile')
     @HttpCode(HttpStatus.OK)
+    @ApiCookieAuth('access_token')
+    @ApiBearerAuth('bearer')
+    @ApiOperation({
+        summary: 'Get current user profile',
+        description: 'Get the full profile of the currently authenticated user',
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Profile retrieved successfully',
+        type: UserProfileDto,
+    })
+    @ApiResponse({ status: 401, description: 'Not authenticated' })
     async getProfile(
         @CurrentUser('id') userId: string,
     ): Promise<{ data: UserProfileDto }> {
@@ -46,6 +67,20 @@ export class UsersController {
      */
     @Patch('profile')
     @HttpCode(HttpStatus.OK)
+    @ApiCookieAuth('access_token')
+    @ApiBearerAuth('bearer')
+    @ApiOperation({
+        summary: 'Update current user profile',
+        description: 'Update profile fields like username, name, bio, avatar',
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Profile updated successfully',
+        type: UserProfileDto,
+    })
+    @ApiResponse({ status: 400, description: 'Validation error' })
+    @ApiResponse({ status: 401, description: 'Not authenticated' })
+    @ApiResponse({ status: 409, description: 'Username already taken' })
     async updateProfile(
         @CurrentUser('id') userId: string,
         @Body() dto: UpdateProfileDto,
@@ -63,6 +98,20 @@ export class UsersController {
      */
     @Post('upgrade-to-creator')
     @HttpCode(HttpStatus.OK)
+    @ApiCookieAuth('access_token')
+    @ApiBearerAuth('bearer')
+    @ApiOperation({
+        summary: 'Upgrade to creator',
+        description:
+            'Upgrade current user to creator role. Requires username to be set first.',
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Successfully upgraded to creator',
+        type: UserProfileDto,
+    })
+    @ApiResponse({ status: 400, description: 'Username not set or already a creator' })
+    @ApiResponse({ status: 401, description: 'Not authenticated' })
     async upgradeToCreator(
         @CurrentUser('id') userId: string,
     ): Promise<{ data: UserProfileDto; message: string }> {
@@ -80,6 +129,18 @@ export class UsersController {
     @Public()
     @Get(':username')
     @HttpCode(HttpStatus.OK)
+    @ApiOperation({
+        summary: 'Get public profile by username',
+        description:
+            'Get public profile of a user. If authenticated, includes follow status.',
+    })
+    @ApiParam({ name: 'username', description: 'Username to look up' })
+    @ApiResponse({
+        status: 200,
+        description: 'Profile retrieved',
+        type: PublicProfileDto,
+    })
+    @ApiResponse({ status: 404, description: 'User not found' })
     async getPublicProfile(
         @Param('username') username: string,
         @CurrentUser('id') currentUserId?: string,
@@ -97,6 +158,18 @@ export class UsersController {
      */
     @Post(':userId/follow')
     @HttpCode(HttpStatus.OK)
+    @ApiCookieAuth('access_token')
+    @ApiBearerAuth('bearer')
+    @ApiOperation({
+        summary: 'Follow a user',
+        description: 'Start following another user',
+    })
+    @ApiParam({ name: 'userId', description: 'User ID to follow' })
+    @ApiResponse({ status: 200, description: 'Successfully followed user' })
+    @ApiResponse({ status: 400, description: 'Cannot follow yourself' })
+    @ApiResponse({ status: 401, description: 'Not authenticated' })
+    @ApiResponse({ status: 404, description: 'User not found' })
+    @ApiResponse({ status: 409, description: 'Already following this user' })
     async follow(
         @CurrentUser('id') currentUserId: string,
         @Param('userId') userId: string,
@@ -111,6 +184,17 @@ export class UsersController {
      */
     @Delete(':userId/follow')
     @HttpCode(HttpStatus.OK)
+    @ApiCookieAuth('access_token')
+    @ApiBearerAuth('bearer')
+    @ApiOperation({
+        summary: 'Unfollow a user',
+        description: 'Stop following another user',
+    })
+    @ApiParam({ name: 'userId', description: 'User ID to unfollow' })
+    @ApiResponse({ status: 200, description: 'Successfully unfollowed user' })
+    @ApiResponse({ status: 400, description: 'Cannot unfollow yourself' })
+    @ApiResponse({ status: 401, description: 'Not authenticated' })
+    @ApiResponse({ status: 404, description: 'Not following this user' })
     async unfollow(
         @CurrentUser('id') currentUserId: string,
         @Param('userId') userId: string,
@@ -126,6 +210,15 @@ export class UsersController {
     @Public()
     @Get(':userId/followers')
     @HttpCode(HttpStatus.OK)
+    @ApiOperation({
+        summary: 'Get followers',
+        description: 'Get paginated list of users following this user',
+    })
+    @ApiParam({ name: 'userId', description: 'User ID to get followers for' })
+    @ApiResponse({
+        status: 200,
+        description: 'Followers list retrieved',
+    })
     async getFollowers(
         @Param('userId') userId: string,
         @Query() query: PaginationQueryDto,
@@ -146,6 +239,15 @@ export class UsersController {
     @Public()
     @Get(':userId/following')
     @HttpCode(HttpStatus.OK)
+    @ApiOperation({
+        summary: 'Get following',
+        description: 'Get paginated list of users this user follows',
+    })
+    @ApiParam({ name: 'userId', description: 'User ID to get following for' })
+    @ApiResponse({
+        status: 200,
+        description: 'Following list retrieved',
+    })
     async getFollowing(
         @Param('userId') userId: string,
         @Query() query: PaginationQueryDto,
@@ -165,6 +267,19 @@ export class UsersController {
      */
     @Get(':userId/follow-status')
     @HttpCode(HttpStatus.OK)
+    @ApiCookieAuth('access_token')
+    @ApiBearerAuth('bearer')
+    @ApiOperation({
+        summary: 'Check follow status',
+        description: 'Check if current user follows the specified user',
+    })
+    @ApiParam({ name: 'userId', description: 'User ID to check follow status for' })
+    @ApiResponse({
+        status: 200,
+        description: 'Follow status retrieved',
+        type: FollowStatusDto,
+    })
+    @ApiResponse({ status: 401, description: 'Not authenticated' })
     async getFollowStatus(
         @CurrentUser('id') currentUserId: string,
         @Param('userId') userId: string,

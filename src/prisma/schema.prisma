@@ -37,15 +37,11 @@ model User {
   deletedAt DateTime? // Soft delete
   
   // Relations
-  followers  Follow[] @relation("following")
-  following  Follow[] @relation("follower")
-  
-  // Future relations (to be uncommented as modules are built)
-  // blogs       Blog[]
-  // likes       Like[]
-  // bookmarks   Bookmark[]
-  // comments    Comment[]
-  // purchases   Purchase[]
+  followers  Follow[]   @relation("following")
+  following  Follow[]   @relation("follower")
+  blogs      Blog[]     @relation("author")
+  likes      Like[]
+  bookmarks  Bookmark[]
   
   @@index([email])
   @@index([username])
@@ -74,6 +70,137 @@ model Follow {
 }
 
 // =========================================
+// BLOG MODEL (Core Content)
+// =========================================
+model Blog {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  title       String
+  subtitle    String?
+  content     String     @db.Text // Markdown content
+  excerpt     String?    @db.Text // Short preview text
+  coverImage  String?
+  
+  // Author
+  authorId    String
+  author      User       @relation("author", fields: [authorId], references: [id], onDelete: Cascade)
+  
+  // Status & Visibility
+  status      BlogStatus @default(DRAFT)
+  isExclusive Boolean    @default(false) // Paid content
+  price       Int?       // Price in tokens (if exclusive)
+  
+  // SEO
+  metaTitle       String?
+  metaDescription String? @db.Text
+  metaKeywords    String?
+  canonicalUrl    String?
+  ogImage         String?
+  
+  // AI-ready fields (will be populated by AI module)
+  summary         String?  @db.Text // AI-generated summary
+  readingTime     Int?     // Estimated reading time in minutes
+  
+  // Engagement stats (denormalized for performance)
+  viewCount     Int @default(0)
+  likeCount     Int @default(0)
+  bookmarkCount Int @default(0)
+  commentCount  Int @default(0)
+  
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  publishedAt DateTime? // When the blog was published
+  deletedAt   DateTime? // Soft delete
+  
+  // Relations
+  likes     Like[]
+  bookmarks Bookmark[]
+  tags      BlogTag[]
+  
+  @@index([slug])
+  @@index([authorId])
+  @@index([status])
+  @@index([isExclusive])
+  @@index([createdAt])
+  @@index([publishedAt])
+  @@index([likeCount])
+  @@index([viewCount])
+  @@map("blogs")
+}
+
+// =========================================
+// TAG MODEL
+// =========================================
+model Tag {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  blogCount Int       @default(0)
+  createdAt DateTime  @default(now())
+  
+  blogs     BlogTag[]
+  
+  @@index([slug])
+  @@index([blogCount])
+  @@map("tags")
+}
+
+// =========================================
+// BLOG-TAG RELATION (Many-to-Many)
+// =========================================
+model BlogTag {
+  id        String   @id @default(cuid())
+  blogId    String
+  tagId     String
+  createdAt DateTime @default(now())
+  
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  @@unique([blogId, tagId])
+  @@index([blogId])
+  @@index([tagId])
+  @@map("blog_tags")
+}
+
+// =========================================
+// LIKE MODEL
+// =========================================
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  blogId    String
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, blogId])
+  @@index([userId])
+  @@index([blogId])
+  @@map("likes")
+}
+
+// =========================================
+// BOOKMARK MODEL
+// =========================================
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  blogId    String
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, blogId])
+  @@index([userId])
+  @@index([blogId])
+  @@map("bookmarks")
+}
+
+// =========================================
 // ENUMS
 // =========================================
 enum Role {
@@ -81,4 +208,10 @@ enum Role {
   CREATOR   // Can publish blogs
   ADMIN     // Platform admin
   OWNER     // Platform owner (you)
+}
+
+enum BlogStatus {
+  DRAFT     // Not visible to anyone except author
+  PUBLISHED // Visible to public (or purchasers if exclusive)
+  ARCHIVED  // Hidden but not deleted
 }
