@@ -14,6 +14,8 @@ import {
     CommentUserDto,
 } from './community.dto';
 
+import { NotificationsService } from '../notifications/notifications.service';
+
 // Define types for Prisma Query Results to avoid implicit any errors
 type UserSelect = {
     id: string;
@@ -41,7 +43,10 @@ type CommentWithRelations = {
 export class CommunityService {
     private readonly logger = new Logger(CommunityService.name);
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly notifications: NotificationsService
+    ) { }
 
     /**
      * Create a comment
@@ -50,7 +55,7 @@ export class CommunityService {
         // Check if blog exists
         const blog = await this.prisma.blog.findUnique({
             where: { id: dto.blogId },
-            select: { id: true, status: true },
+            select: { id: true, status: true, title: true, authorId: true },
         });
 
         if (!blog) {
@@ -61,11 +66,13 @@ export class CommunityService {
             throw new ForbiddenException('Cannot comment on unpublished blogs');
         }
 
+        let parentAuthorId: string | null = null;
+
         // Check parent if reply
         if (dto.parentId) {
             const parent = await this.prisma.comment.findUnique({
                 where: { id: dto.parentId },
-                select: { id: true, blogId: true },
+                select: { id: true, blogId: true, userId: true },
             });
 
             if (!parent) {
@@ -75,6 +82,8 @@ export class CommunityService {
             if (parent.blogId !== dto.blogId) {
                 throw new ForbiddenException('Parent comment belongs to a different blog');
             }
+
+            parentAuthorId = parent.userId;
         }
 
         const comment = await this.prisma.comment.create({
@@ -104,6 +113,31 @@ export class CommunityService {
         });
 
         this.logger.log(`User ${userId} commented on blog ${dto.blogId}`);
+
+        // Trigger Notifications
+
+        // 1. Notify blog author (if not self)
+        if (blog.authorId !== userId) {
+            await this.notifications.create({
+                userId: blog.authorId,
+                type: 'COMMENT',
+                title: 'New Comment',
+                message: `Someone commented on your blog "${blog.title}"`,
+                data: { blogId: blog.id, commentId: comment.id, actorId: userId },
+            });
+        }
+
+        // 2. Notify parent comment author (if reply and not self)
+        if (parentAuthorId && parentAuthorId !== userId && parentAuthorId !== blog.authorId) {
+            // Check if parent author is different from blog author (to avoid double notification if they are same)
+            await this.notifications.create({
+                userId: parentAuthorId,
+                type: 'REPLY',
+                title: 'New Reply',
+                message: `Someone replied to your comment on "${blog.title}"`,
+                data: { blogId: blog.id, commentId: comment.id, actorId: userId },
+            });
+        }
 
         return this.toCommentDto(comment);
     }

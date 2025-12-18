@@ -24,6 +24,7 @@ import { ExploreModule } from './modules/explore/explore.module';
 import { AIModule } from './modules/ai/ai.module';
 import { CommunityModule } from './modules/community/community.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
@@ -56,6 +57,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     AIModule,
     CommunityModule,
     PaymentsModule,
+    NotificationsModule,
   ],
   providers: [
     // Global exception filter
