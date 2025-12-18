@@ -22,6 +22,19 @@ export const MESSAGES = {
         INACTIVE: 'User account is inactive',
     },
 
+    // Blog
+    BLOG: {
+        NOT_FOUND: 'Blog not found',
+        CREATED: 'Blog created successfully',
+        UPDATED: 'Blog updated successfully',
+        DELETED: 'Blog deleted successfully',
+        PUBLISHED: 'Blog published successfully',
+        UNPUBLISHED: 'Blog unpublished successfully',
+        ALREADY_PUBLISHED: 'Blog is already published',
+        NOT_PUBLISHED: 'Blog is not published',
+        FORBIDDEN: 'You do not have permission to modify this blog',
+    },
+
     // General
     GENERAL: {
         SUCCESS: 'Operation successful',
