@@ -37,8 +37,9 @@ async function bootstrap() {
   );
 
   // CORS configuration
+  const isDev = configService.get<string>('app.env', 'development') === 'development';
   app.enableCors({
-    origin: frontendUrl,
+    origin: isDev ? true : frontendUrl, // Allow any origin in dev mode
     credentials: true, // Allow cookies
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],

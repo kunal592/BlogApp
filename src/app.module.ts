@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { join } from 'path';
 
 // Configuration
 import { appConfig, authConfig, aiConfig, paymentConfig } from './config';
@@ -26,6 +28,14 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
       envFilePath: ['.env.local', '.env'],
     }),
 
+    // Serve static files (test page)
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'public'),
+      serveRoot: '/',
+      serveStaticOptions: {
+        index: ['index.html'],
+      },
+    }),
 
     // Database
     PrismaModule,
