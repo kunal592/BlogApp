@@ -20,6 +20,45 @@ import {
 } from './blogs.dto';
 import { MESSAGES } from '../../common/constants';
 
+// Type for blog with includes
+type BlogWithAuthorAndTags = {
+    id: string;
+    slug: string;
+    title: string;
+    subtitle: string | null;
+    content: string;
+    excerpt: string | null;
+    coverImage: string | null;
+    status: string;
+    isExclusive: boolean;
+    price: number | null;
+    viewCount: number;
+    likeCount: number;
+    bookmarkCount: number;
+    commentCount: number;
+    readingTime: number | null;
+    metaTitle: string | null;
+    metaDescription: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    publishedAt: Date | null;
+    deletedAt: Date | null;
+    author: {
+        id: string;
+        username: string | null;
+        name: string | null;
+        avatar: string | null;
+        isVerified: boolean;
+    };
+    tags: Array<{
+        tag: {
+            id: string;
+            name: string;
+            slug: string;
+        };
+    }>;
+};
+
 @Injectable()
 export class BlogsService {
     private readonly logger = new Logger(BlogsService.name);
@@ -232,25 +271,25 @@ export class BlogsService {
                 this.prisma.like.findMany({
                     where: {
                         userId: currentUserId,
-                        blogId: { in: blogs.map((b) => b.id) },
+                        blogId: { in: blogs.map((b: { id: string }) => b.id) },
                     },
                     select: { blogId: true },
                 }),
                 this.prisma.bookmark.findMany({
                     where: {
                         userId: currentUserId,
-                        blogId: { in: blogs.map((b) => b.id) },
+                        blogId: { in: blogs.map((b: { id: string }) => b.id) },
                     },
                     select: { blogId: true },
                 }),
             ]);
 
-            likedBlogIds = new Set(likes.map((l) => l.blogId));
-            bookmarkedBlogIds = new Set(bookmarks.map((b) => b.blogId));
+            likedBlogIds = new Set(likes.map((l: { blogId: string }) => l.blogId));
+            bookmarkedBlogIds = new Set(bookmarks.map((b: { blogId: string }) => b.blogId));
         }
 
         return {
-            data: blogs.map((blog) => this.toBlogListItemDto(blog, likedBlogIds, bookmarkedBlogIds)),
+            data: blogs.map((blog: BlogWithAuthorAndTags) => this.toBlogListItemDto(blog, likedBlogIds, bookmarkedBlogIds)),
             meta: {
                 page,
                 limit,
@@ -306,7 +345,7 @@ export class BlogsService {
         ]);
 
         return {
-            data: blogs.map((blog) => this.toBlogListItemDto(blog, new Set(), new Set())),
+            data: blogs.map((blog: BlogWithAuthorAndTags) => this.toBlogListItemDto(blog, new Set<string>(), new Set<string>())),
             meta: {
                 page,
                 limit,
@@ -744,17 +783,17 @@ export class BlogsService {
         ]);
 
         // Get likes for these blogs
-        const blogIds = bookmarks.map((b) => b.blog.id);
+        const blogIds: string[] = bookmarks.map((b: { blog: { id: string } }) => b.blog.id);
         const likes = await this.prisma.like.findMany({
             where: { userId, blogId: { in: blogIds } },
             select: { blogId: true },
         });
-        const likedBlogIds = new Set(likes.map((l) => l.blogId));
+        const likedBlogIds = new Set(likes.map((l: { blogId: string }) => l.blogId));
 
         return {
             data: bookmarks
-                .filter((b) => !b.blog.deletedAt && b.blog.status === 'PUBLISHED')
-                .map((b) => this.toBlogListItemDto(b.blog, likedBlogIds, new Set(blogIds))),
+                .filter((b: { blog: { deletedAt: Date | null; status: string } }) => !b.blog.deletedAt && b.blog.status === 'PUBLISHED')
+                .map((b: { blog: BlogWithAuthorAndTags }) => this.toBlogListItemDto(b.blog, likedBlogIds, new Set<string>(blogIds))),
             meta: {
                 page,
                 limit,
@@ -833,21 +872,21 @@ export class BlogsService {
         if (currentUserId) {
             const [likes, bookmarks] = await Promise.all([
                 this.prisma.like.findMany({
-                    where: { userId: currentUserId, blogId: { in: blogs.map((b) => b.id) } },
+                    where: { userId: currentUserId, blogId: { in: blogs.map((b: { id: string }) => b.id) } },
                     select: { blogId: true },
                 }),
                 this.prisma.bookmark.findMany({
-                    where: { userId: currentUserId, blogId: { in: blogs.map((b) => b.id) } },
+                    where: { userId: currentUserId, blogId: { in: blogs.map((b: { id: string }) => b.id) } },
                     select: { blogId: true },
                 }),
             ]);
 
-            likedBlogIds = new Set(likes.map((l) => l.blogId));
-            bookmarkedBlogIds = new Set(bookmarks.map((b) => b.blogId));
+            likedBlogIds = new Set(likes.map((l: { blogId: string }) => l.blogId));
+            bookmarkedBlogIds = new Set(bookmarks.map((b: { blogId: string }) => b.blogId));
         }
 
         return {
-            data: blogs.map((blog) => this.toBlogListItemDto(blog, likedBlogIds, bookmarkedBlogIds)),
+            data: blogs.map((blog: BlogWithAuthorAndTags) => this.toBlogListItemDto(blog, likedBlogIds, bookmarkedBlogIds)),
             meta: {
                 page,
                 limit,

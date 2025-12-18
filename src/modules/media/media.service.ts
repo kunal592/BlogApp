@@ -25,6 +25,22 @@ import {
 } from './media.dto';
 import { randomUUID } from 'crypto';
 
+// Type for Media record from Prisma
+type MediaRecord = {
+    id: string;
+    filename: string;
+    url: string;
+    mimeType: string;
+    size: number;
+    type: string;
+    purpose: string;
+    blogId: string | null;
+    alt: string | null;
+    width: number | null;
+    height: number | null;
+    createdAt: Date;
+};
+
 @Injectable()
 export class MediaService {
     private readonly logger = new Logger(MediaService.name);
@@ -348,7 +364,7 @@ export class MediaService {
             orderBy: { createdAt: 'desc' },
         });
 
-        return media.map((m) => this.toMediaResponseDto(m));
+        return media.map((m: MediaRecord) => this.toMediaResponseDto(m));
     }
 
     /**
@@ -433,7 +449,7 @@ export class MediaService {
         ]);
 
         return {
-            data: media.map((m) => this.toMediaResponseDto(m)),
+            data: media.map((m: MediaRecord) => this.toMediaResponseDto(m)),
             meta: {
                 page,
                 limit,
