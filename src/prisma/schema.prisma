@@ -117,6 +117,7 @@ model Blog {
   likes     Like[]
   bookmarks Bookmark[]
   tags      BlogTag[]
+  media     Media[]    // Associated media (covers, inline images)
   
   @@index([slug])
   @@index([authorId])
@@ -201,6 +202,43 @@ model Bookmark {
 }
 
 // =========================================
+// MEDIA MODEL (File Uploads)
+// =========================================
+model Media {
+  id          String       @id @default(cuid())
+  userId      String
+  
+  // File info
+  filename    String       // Original filename
+  key         String       @unique // S3/R2 key (path in bucket)
+  url         String       // Public URL
+  mimeType    String
+  size        Int          // File size in bytes
+  type        MediaType    // File category
+  purpose     MediaPurpose @default(GENERAL) // Usage purpose
+  
+  // Association with blog (optional)
+  blogId      String?
+  blog        Blog?        @relation(fields: [blogId], references: [id], onDelete: SetNull)
+  
+  // Metadata
+  alt         String?      // Alt text for images
+  width       Int?         // Image width
+  height      Int?         // Image height
+  
+  // Timestamps
+  createdAt   DateTime     @default(now())
+  deletedAt   DateTime?    // Soft delete
+  
+  @@index([userId])
+  @@index([blogId])
+  @@index([type])
+  @@index([purpose])
+  @@index([createdAt])
+  @@map("media")
+}
+
+// =========================================
 // ENUMS
 // =========================================
 enum Role {
@@ -214,4 +252,17 @@ enum BlogStatus {
   DRAFT     // Not visible to anyone except author
   PUBLISHED // Visible to public (or purchasers if exclusive)
   ARCHIVED  // Hidden but not deleted
+}
+
+enum MediaType {
+  IMAGE     // Blog images, avatars, covers
+  DOCUMENT  // PDFs, etc.
+  OTHER
+}
+
+enum MediaPurpose {
+  AVATAR    // User profile picture
+  COVER     // Blog cover image
+  INLINE    // Image within blog content
+  GENERAL   // Unassigned / media library
 }

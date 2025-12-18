@@ -5,7 +5,7 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { join } from 'path';
 
 // Configuration
-import { appConfig, authConfig, aiConfig, paymentConfig } from './config';
+import { appConfig, authConfig, aiConfig, paymentConfig, storageConfig } from './config';
 
 // Prisma
 import { PrismaModule } from './prisma/prisma.module';
@@ -19,6 +19,7 @@ import { RolesGuard } from './common/guards';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { BlogsModule } from './modules/blogs/blogs.module';
+import { MediaModule } from './modules/media/media.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
@@ -26,7 +27,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     // Global configuration
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, authConfig, aiConfig, paymentConfig],
+      load: [appConfig, authConfig, aiConfig, paymentConfig, storageConfig],
       envFilePath: ['.env.local', '.env'],
     }),
 
@@ -46,6 +47,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     AuthModule,
     UsersModule,
     BlogsModule,
+    MediaModule,
   ],
   providers: [
     // Global exception filter
