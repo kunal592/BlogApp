@@ -25,6 +25,7 @@ import { AIModule } from './modules/ai/ai.module';
 import { CommunityModule } from './modules/community/community.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
@@ -58,6 +59,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     CommunityModule,
     PaymentsModule,
     NotificationsModule,
+    AdminModule,
   ],
   providers: [
     // Global exception filter
