@@ -21,6 +21,7 @@ import { UsersModule } from './modules/users/users.module';
 import { BlogsModule } from './modules/blogs/blogs.module';
 import { MediaModule } from './modules/media/media.module';
 import { ExploreModule } from './modules/explore/explore.module';
+import { AIModule } from './modules/ai/ai.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
@@ -50,6 +51,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     BlogsModule,
     MediaModule,
     ExploreModule,
+    AIModule,
   ],
   providers: [
     // Global exception filter

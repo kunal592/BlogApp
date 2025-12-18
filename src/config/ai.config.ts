@@ -3,10 +3,14 @@ import { registerAs } from '@nestjs/config';
 export default registerAs('ai', () => ({
     provider: 'gemini',
 
+    // Gemini API settings (flat access for easier use)
+    geminiApiKey: process.env.GEMINI_API_KEY || '',
+    geminiModel: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+
     gemini: {
         apiKey: process.env.GEMINI_API_KEY || '',
-        model: process.env.GEMINI_MODEL || 'gemini-pro',
-        embeddingModel: process.env.GEMINI_EMBEDDING_MODEL || 'embedding-001',
+        model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+        embeddingModel: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004',
     },
 
     // RAG settings
