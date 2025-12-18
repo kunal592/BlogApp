@@ -1,15 +1,10 @@
 import { Module } from '@nestjs/common';
+import { UsersController } from './users.controller';
+import { UsersService } from './users.service';
 
-/**
- * Users Module
- * 
- * Placeholder for user management functionality.
- * Will be implemented in Phase 2.
- */
 @Module({
-    imports: [],
-    controllers: [],
-    providers: [],
-    exports: [],
+    controllers: [UsersController],
+    providers: [UsersService],
+    exports: [UsersService],
 })
 export class UsersModule { }

@@ -3,6 +3,7 @@
  * 
  * This file defines all user-related endpoints.
  * Both frontend and backend MUST import from this file.
+ * This prevents endpoint mismatch issues.
  */
 
 export const USERS_API = {
@@ -12,26 +13,56 @@ export const USERS_API = {
     // Endpoints
     GET_PROFILE: {
         method: 'GET',
-        path: '/users/:id',
-        description: 'Get user profile by ID',
+        path: '/users/profile',
+        description: 'Get current user profile (authenticated)',
     },
 
     UPDATE_PROFILE: {
         method: 'PATCH',
-        path: '/users/:id',
-        description: 'Update user profile',
+        path: '/users/profile',
+        description: 'Update current user profile',
     },
 
-    DEACTIVATE: {
-        method: 'DELETE',
-        path: '/users/:id',
-        description: 'Soft delete (deactivate) user account',
-    },
-
-    LIST: {
+    GET_PUBLIC_PROFILE: {
         method: 'GET',
-        path: '/users',
-        description: 'List users (admin only)',
+        path: '/users/:username',
+        description: 'Get public user profile by username',
+    },
+
+    FOLLOW: {
+        method: 'POST',
+        path: '/users/:userId/follow',
+        description: 'Follow a user',
+    },
+
+    UNFOLLOW: {
+        method: 'DELETE',
+        path: '/users/:userId/follow',
+        description: 'Unfollow a user',
+    },
+
+    GET_FOLLOWERS: {
+        method: 'GET',
+        path: '/users/:userId/followers',
+        description: 'Get list of followers',
+    },
+
+    GET_FOLLOWING: {
+        method: 'GET',
+        path: '/users/:userId/following',
+        description: 'Get list of users being followed',
+    },
+
+    CHECK_FOLLOW_STATUS: {
+        method: 'GET',
+        path: '/users/:userId/follow-status',
+        description: 'Check if current user follows target user',
+    },
+
+    UPGRADE_TO_CREATOR: {
+        method: 'POST',
+        path: '/users/upgrade-to-creator',
+        description: 'Upgrade current user to creator role',
     },
 } as const;
 

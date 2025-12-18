@@ -17,6 +17,7 @@ import { RolesGuard } from './common/guards';
 
 // Modules
 import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
@@ -42,6 +43,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
     // Feature Modules
     AuthModule,
+    UsersModule,
   ],
   providers: [
     // Global exception filter

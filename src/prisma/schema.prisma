@@ -17,34 +17,68 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   password  String
+  username  String?  @unique
   name      String?
-  bio       String?
+  bio       String?  @db.Text
   avatar    String?
   role      Role     @default(USER)
   
   // Status
-  isActive  Boolean  @default(true)
-  isVerified Boolean @default(false)
+  isActive   Boolean  @default(true)
+  isVerified Boolean  @default(false)
+  
+  // Social stats (denormalized for performance)
+  followerCount  Int @default(0)
+  followingCount Int @default(0)
   
   // Timestamps
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime? // Soft delete
   
-  // Relations (to be added in future modules)
-  // blogs     Blog[]
-  // comments  Comment[]
-  // likes     Like[]
+  // Relations
+  followers  Follow[] @relation("following")
+  following  Follow[] @relation("follower")
   
+  // Future relations (to be uncommented as modules are built)
+  // blogs       Blog[]
+  // likes       Like[]
+  // bookmarks   Bookmark[]
+  // comments    Comment[]
+  // purchases   Purchase[]
+  
+  @@index([email])
+  @@index([username])
+  @@index([role])
+  @@index([createdAt])
   @@map("users")
+}
+
+// =========================================
+// FOLLOW MODEL (Social Graph)
+// =========================================
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  follower  User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
 }
 
 // =========================================
 // ENUMS
 // =========================================
 enum Role {
-  USER
-  CREATOR
-  ADMIN
-  OWNER
+  USER      // Regular reader
+  CREATOR   // Can publish blogs
+  ADMIN     // Platform admin
+  OWNER     // Platform owner (you)
 }
