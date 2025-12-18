@@ -42,6 +42,8 @@ model User {
   blogs      Blog[]     @relation("author")
   likes      Like[]
   bookmarks  Bookmark[]
+  comments   Comment[]
+  commentLikes CommentLike[]
   
   @@index([email])
   @@index([username])
@@ -118,6 +120,7 @@ model Blog {
   bookmarks Bookmark[]
   tags      BlogTag[]
   media     Media[]    // Associated media (covers, inline images)
+  comments  Comment[]
   
   @@index([slug])
   @@index([authorId])
@@ -265,4 +268,56 @@ enum MediaPurpose {
   COVER     // Blog cover image
   INLINE    // Image within blog content
   GENERAL   // Unassigned / media library
+}
+
+// =========================================
+// COMMENT MODEL
+// =========================================
+model Comment {
+  id          String    @id @default(cuid())
+  content     String    @db.Text
+  userId      String
+  blogId      String
+  
+  // Threading / Replies
+  parentId    String?
+  parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Comment[] @relation("CommentReplies")
+  
+  // Counters
+  likeCount   Int       @default(0)
+  
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blog        Blog      @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  likes       CommentLike[]
+  
+  @@index([userId])
+  @@index([blogId])
+  @@index([parentId])
+  @@index([createdAt])
+  @@map("comments")
+}
+
+// =========================================
+// COMMENT LIKE MODEL
+// =========================================
+model CommentLike {
+  id        String   @id @default(cuid())
+  userId    String
+  commentId String
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, commentId])
+  @@index([userId])
+  @@index([commentId])
+  @@map("comment_likes")
 }
