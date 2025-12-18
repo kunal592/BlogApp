@@ -23,6 +23,7 @@ import { MediaModule } from './modules/media/media.module';
 import { ExploreModule } from './modules/explore/explore.module';
 import { AIModule } from './modules/ai/ai.module';
 import { CommunityModule } from './modules/community/community.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
@@ -54,6 +55,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     ExploreModule,
     AIModule,
     CommunityModule,
+    PaymentsModule,
   ],
   providers: [
     // Global exception filter
