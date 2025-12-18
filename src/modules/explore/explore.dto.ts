@@ -180,6 +180,15 @@ export class SearchBlogDto {
 
     @ApiProperty({ type: [TagResponseDto] })
     tags!: TagResponseDto[];
+
+    @ApiPropertyOptional({ example: false })
+    isLiked?: boolean;
+
+    @ApiPropertyOptional({ example: false })
+    isBookmarked?: boolean;
+
+    @ApiPropertyOptional({ example: false })
+    isFollowing?: boolean;
 }
 
 /**

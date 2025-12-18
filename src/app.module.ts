@@ -28,6 +28,9 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AdminModule } from './modules/admin/admin.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
+import { CacheModule } from '@nestjs/cache-manager';
+import * as redisStore from 'cache-manager-redis-store';
+
 @Module({
   imports: [
     // Global configuration
@@ -35,6 +38,15 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
       isGlobal: true,
       load: [appConfig, authConfig, aiConfig, paymentConfig, storageConfig],
       envFilePath: ['.env.local', '.env'],
+    }),
+
+    // Caching (Redis)
+    CacheModule.register({
+      isGlobal: true,
+      store: redisStore,
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+      ttl: 600,
     }),
 
     // Serve static files (test page)

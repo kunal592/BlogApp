@@ -1,4 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
     SearchQueryDto,
@@ -55,6 +57,7 @@ type TagRecord = {
     name: string;
     slug: string;
     blogCount: number;
+    description: string | null;
 };
 
 type BlogTagWithBlog = {
@@ -65,7 +68,11 @@ type BlogTagWithBlog = {
 export class ExploreService {
     private readonly logger = new Logger(ExploreService.name);
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        @Inject(CACHE_MANAGER) private cacheManager: Cache
+    ) { }
+
 
     /**
      * Search blogs and users
@@ -206,67 +213,125 @@ export class ExploreService {
     ): Promise<PaginatedFeedDto> {
         const { page = 1, limit = 10, period = 'week' } = query;
         const skip = (page - 1) * limit;
+        const cacheKey = `trending:${period}:${page}:${limit}`;
 
-        // Calculate date threshold based on period
-        const now = new Date();
-        let dateThreshold: Date;
-        switch (period) {
-            case 'day':
-                dateThreshold = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-                break;
-            case 'week':
-                dateThreshold = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                break;
-            case 'month':
-                dateThreshold = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                break;
-            default:
-                dateThreshold = new Date(0); // All time
+        // Check cache
+        const cached = await this.cacheManager.get<{ blogs: any[], total: number }>(cacheKey);
+
+        let blogsResult: any[];
+        let totalResult: number;
+
+        if (cached) {
+            blogsResult = cached.blogs;
+            totalResult = cached.total;
+        } else {
+            // Calculate date threshold based on period
+            const now = new Date();
+            let dateThreshold: Date;
+            switch (period) {
+                case 'day':
+                    dateThreshold = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                    break;
+                case 'week':
+                    dateThreshold = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    break;
+                case 'month':
+                    dateThreshold = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    break;
+                default:
+                    dateThreshold = new Date(0); // All time
+            }
+
+            const where = {
+                status: 'PUBLISHED' as const,
+                deletedAt: null,
+                publishedAt: { gte: dateThreshold },
+            };
+
+            const [blogs, total] = await Promise.all([
+                this.prisma.blog.findMany({
+                    where,
+                    orderBy: [
+                        { likeCount: 'desc' },
+                        { viewCount: 'desc' },
+                        { bookmarkCount: 'desc' },
+                    ],
+                    skip,
+                    take: limit,
+                    include: {
+                        author: {
+                            select: {
+                                id: true,
+                                username: true,
+                                name: true,
+                                avatar: true,
+                                isVerified: true,
+                            },
+                        },
+                        tags: {
+                            include: {
+                                tag: true
+                            }
+                        }
+                    },
+                }),
+                this.prisma.blog.count({ where }),
+            ]);
+
+            blogsResult = blogs;
+            totalResult = total;
+
+            // Cache for 10 minutes
+            await this.cacheManager.set(cacheKey, { blogs: blogsResult, total: totalResult }, 600 * 1000);
         }
 
-        const where = {
-            status: 'PUBLISHED' as const,
-            deletedAt: null,
-            publishedAt: { gte: dateThreshold },
-        };
+        // Get User Interactions (Likes/Bookmarks) if logged in
+        let likedBlogs = new Set<string>();
+        let bookmarkedBlogs = new Set<string>();
+        let followingIds = new Set<string>();
 
-        const [blogs, total] = await Promise.all([
-            this.prisma.blog.findMany({
-                where,
-                orderBy: [
-                    { likeCount: 'desc' },
-                    { viewCount: 'desc' },
-                    { bookmarkCount: 'desc' },
-                ],
-                skip,
-                take: limit,
-                include: {
-                    author: {
-                        select: {
-                            id: true,
-                            username: true,
-                            name: true,
-                            avatar: true,
-                            isVerified: true,
-                        },
+        if (currentUserId) {
+            const blogIds = blogsResult.map(b => b.id);
+            const authorIds = [...new Set(blogsResult.map(b => b.authorId))]; // Fix: authorId is accessible
+
+            const [likes, bookmarks, following] = await Promise.all([
+                this.prisma.like.findMany({
+                    where: {
+                        userId: currentUserId,
+                        blogId: { in: blogIds },
                     },
-                    tags: {
-                        include: {
-                            tag: { select: { id: true, name: true, slug: true } },
-                        },
+                }),
+                this.prisma.bookmark.findMany({
+                    where: {
+                        userId: currentUserId,
+                        blogId: { in: blogIds },
                     },
-                },
-            }),
-            this.prisma.blog.count({ where }),
-        ]);
+                }),
+                this.prisma.follow.findMany({
+                    where: {
+                        followerId: currentUserId,
+                        followingId: { in: authorIds },
+                    },
+                }),
+            ]);
+
+            likedBlogs = new Set(likes.map(l => l.blogId));
+            bookmarkedBlogs = new Set(bookmarks.map(b => b.blogId));
+            followingIds = new Set(following.map(f => f.followingId));
+        }
 
         return {
-            data: blogs.map((blog: BlogWithAuthorAndTags) => this.toBlogDto(blog)),
+            data: blogsResult.map(blog => this.toBlogDto(
+                blog,
+                likedBlogs.has(blog.id),
+                bookmarkedBlogs.has(blog.id),
+                followingIds.has(blog.authorId)
+            )),
             meta: {
                 page,
                 limit,
-                total,
-                totalPages: Math.ceil(total / limit),
+                total: totalResult,
+                totalPages: Math.ceil(totalResult / limit),
             },
         };
     }
@@ -639,31 +704,36 @@ export class ExploreService {
     /**
      * Convert blog to DTO
      */
-    private toBlogDto(blog: {
-        id: string;
-        slug: string;
-        title: string;
-        excerpt: string | null;
-        coverImage: string | null;
-        viewCount: number;
-        likeCount: number;
-        readingTime: number | null;
-        publishedAt: Date | null;
-        author: {
+    private toBlogDto(
+        blog: {
             id: string;
-            username: string | null;
-            name: string | null;
-            avatar: string | null;
-            isVerified: boolean;
-        };
-        tags: Array<{
-            tag: {
+            slug: string;
+            title: string;
+            excerpt: string | null;
+            coverImage: string | null;
+            viewCount: number;
+            likeCount: number;
+            readingTime: number | null;
+            publishedAt: Date | null;
+            author: {
                 id: string;
-                name: string;
-                slug: string;
+                username: string | null;
+                name: string | null;
+                avatar: string | null;
+                isVerified: boolean;
             };
-        }>;
-    }): SearchBlogDto {
+            tags: Array<{
+                tag: {
+                    id: string;
+                    name: string;
+                    slug: string;
+                };
+            }>;
+        },
+        isLiked = false,
+        isBookmarked = false,
+        isFollowing = false,
+    ): SearchBlogDto {
         return {
             id: blog.id,
             slug: blog.slug,
@@ -679,8 +749,11 @@ export class ExploreService {
                 id: t.tag.id,
                 name: t.tag.name,
                 slug: t.tag.slug,
-                blogCount: 0, // Not needed in blog context
+                blogCount: 0,
             })),
+            isLiked,
+            isBookmarked,
+            isFollowing,
         };
     }
 }
