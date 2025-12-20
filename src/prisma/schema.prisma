@@ -42,10 +42,13 @@ model User {
   blogs      Blog[]     @relation("author")
   likes      Like[]
   bookmarks  Bookmark[]
-  comments   Comment[]
-  commentLikes CommentLike[]
-  purchases  Purchase[]
+  comments      Comment[]
+  commentLikes  CommentLike[]
+  purchases     Purchase[]
   notifications Notification[]
+  wallet        Wallet?
+  communityNotes CommunityNote[]
+  noteVotes     NoteVote[]
   
   @@index([email])
   @@index([username])
@@ -124,6 +127,7 @@ model Blog {
   media     Media[]    // Associated media (covers, inline images)
   comments  Comment[]
   purchases Purchase[]
+  communityNotes CommunityNote[]
   
   @@index([slug])
   @@index([authorId])
@@ -358,6 +362,96 @@ enum PaymentStatus {
   COMPLETED
   FAILED
   REFUNDED
+}
+
+// =========================================
+// WALLET & LEDGER SYSTEM
+// =========================================
+model Wallet {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  balance   Int      @default(0) // Current balance in tokens
+  updatedAt DateTime @updatedAt
+  
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@map("wallets")
+}
+
+model Transaction {
+  id        String          @id @default(cuid())
+  walletId  String
+  amount    Int             // Positive for credit, negative for debit
+  type      TransactionType
+  status    PaymentStatus   @default(COMPLETED)
+  referenceId String?       // ID of related entity (purchaseId, payoutId)
+  metadata  Json?           // Extra details { blogId: ..., fromUserId: ... }
+  createdAt DateTime        @default(now())
+
+  wallet    Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+enum TransactionType {
+  DEPOSIT       // User buys tokens (Real Money -> Tokens)
+  SPEND         // User unlocks content (Tokens -> System)
+  EARNING       // Creator receives share (System -> Tokens)
+  WITHDRAWAL    // Creator converts tokens (Tokens -> Real Money)
+  PLATFORM_FEE  // Platform share
+  REFUND        // Refund
+}
+
+// =========================================
+// COMMUNITY NOTES (Crowd Wisdom)
+// =========================================
+model CommunityNote {
+  id        String     @id @default(cuid())
+  blogId    String
+  userId    String
+  content   String     @db.Text
+  quote     String?    @db.Text // Selected text context
+  status    NoteStatus @default(PENDING)
+  
+  // Voting stats
+  helpfulCount    Int @default(0)
+  notHelpfulCount Int @default(0)
+  score           Int @default(0) // helpful - notHelpful
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes     NoteVote[]
+
+  @@index([blogId])
+  @@index([status])
+  @@map("community_notes")
+}
+
+model NoteVote {
+  id        String   @id @default(cuid())
+  userId    String
+  noteId    String
+  isHelpful Boolean
+  createdAt DateTime @default(now())
+
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  note      CommunityNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, noteId])
+  @@map("note_votes")
+}
+
+enum NoteStatus {
+  PENDING
+  PUBLISHED // Visible context added
+  REJECTED  // Not helpful
 }
 
 // =========================================

@@ -31,6 +31,8 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
 
+import { BullModule } from '@nestjs/bullmq';
+
 @Module({
   imports: [
     // Global configuration
@@ -38,6 +40,21 @@ import * as redisStore from 'cache-manager-redis-store';
       isGlobal: true,
       load: [appConfig, authConfig, aiConfig, paymentConfig, storageConfig],
       envFilePath: ['.env.local', '.env'],
+    }),
+
+    // BullMQ Configuration
+    BullModule.forRoot({
+      connection: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+      },
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
+      },
     }),
 
     // Caching (Redis)

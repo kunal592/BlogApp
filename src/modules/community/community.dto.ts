@@ -149,3 +149,80 @@ export class PaginatedCommentsDto {
         totalPages: number;
     };
 }
+
+/**
+ * DTO for creating a community note
+ */
+export class CreateNoteDto {
+    @ApiProperty({
+        example: 'clxxxxxxxxxxxxxxxxxx',
+        description: 'ID of the blog',
+    })
+    @IsString()
+    blogId!: string;
+
+    @ApiProperty({
+        example: 'This part is misleading because...',
+        description: 'Note content',
+        minLength: 10,
+        maxLength: 2000,
+    })
+    @IsString()
+    @MinLength(10)
+    @MaxLength(2000)
+    content!: string;
+
+    @ApiPropertyOptional({
+        example: 'Original text quote',
+        description: 'quoted text from blog',
+    })
+    @IsOptional()
+    @IsString()
+    quote?: string;
+}
+
+/**
+ * DTO for voting on a note
+ */
+export class VoteNoteDto {
+    @ApiProperty({ example: true, description: 'True for Helpful, False for Not Helpful' })
+    isHelpful!: boolean;
+}
+
+/**
+ * DTO for Note Object
+ */
+export class NoteResponseDto {
+    @ApiProperty({ example: 'clxxxxxxxxxxxxxxxxxx' })
+    id!: string;
+
+    @ApiProperty({ example: 'clxxxxxxxxxxxxxxxxxx' })
+    blogId!: string;
+
+    @ApiProperty({ example: 'clxxxxxxxxxxxxxxxxxx' })
+    userId!: string;
+
+    @ApiProperty({ example: 'This is a note.' })
+    content!: string;
+
+    @ApiPropertyOptional({ example: 'Quote text' })
+    quote!: string | null;
+
+    @ApiProperty({ example: 'PENDING', enum: ['PENDING', 'PUBLISHED', 'REJECTED'] })
+    status!: string;
+
+    @ApiProperty({ example: 10 })
+    helpfulCount!: number;
+
+    @ApiProperty({ example: 2 })
+    notHelpfulCount!: number;
+
+    @ApiProperty({ example: 8 })
+    score!: number;
+
+    @ApiProperty({ example: '2023-01-01T00:00:00.000Z' })
+    createdAt!: Date;
+
+    @ApiProperty({ type: CommentUserDto })
+    user!: CommentUserDto;
+}

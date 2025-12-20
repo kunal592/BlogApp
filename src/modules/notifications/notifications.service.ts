@@ -2,6 +2,8 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationType } from '@prisma/client';
 import { NotificationResponseDto } from './notifications.dto';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 interface CreateNotificationParams {
     userId: string; // Recipient
@@ -15,26 +17,22 @@ interface CreateNotificationParams {
 export class NotificationsService {
     private readonly logger = new Logger(NotificationsService.name);
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        @InjectQueue('notifications') private readonly notificationsQueue: Queue,
+    ) { }
 
     /**
-     * Internal: Create a new notification
+     * Internal: Create a new notification (Async via Queue)
      */
     async create(params: CreateNotificationParams): Promise<void> {
         try {
-            await this.prisma.notification.create({
-                data: {
-                    userId: params.userId,
-                    type: params.type,
-                    title: params.title,
-                    message: params.message,
-                    data: params.data || {},
-                },
+            await this.notificationsQueue.add('send-notification', params, {
+                removeOnComplete: true,
+                attempts: 3,
             });
-            // In a real app, we would emit a WebSocket event here for realtime updates
         } catch (error) {
-            this.logger.error('Failed to create notification', error);
-            // Don't throw, notifications are non-critical
+            this.logger.error('Failed to add notification to queue', error);
         }
     }
 
