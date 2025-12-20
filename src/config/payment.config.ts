@@ -4,8 +4,8 @@ export default registerAs('payment', () => ({
     provider: 'razorpay',
 
     razorpay: {
-        keyId: process.env.RAZORPAY_KEY_ID || '',
-        keySecret: process.env.RAZORPAY_KEY_SECRET || '',
+        keyId: process.env.RAZORPAY_KEY_ID || 'test_key_id',
+        keySecret: process.env.RAZORPAY_KEY_SECRET || 'test_key_secret',
         webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || '',
     },
 

@@ -41,7 +41,7 @@ export class BlogsController {
      */
     @Post()
     @HttpCode(HttpStatus.CREATED)
-    @Roles('CREATOR', 'ADMIN', 'OWNER')
+    @Roles('USER', 'CREATOR', 'ADMIN', 'OWNER')
     @ApiCookieAuth('access_token')
     @ApiBearerAuth('bearer')
     @ApiOperation({

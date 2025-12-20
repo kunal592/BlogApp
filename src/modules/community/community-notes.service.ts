@@ -91,7 +91,7 @@ export class CommunityNotesService {
                 this.prisma.communityNote.update({
                     where: { id: noteId },
                     data: {
-                        helpfulCount: isHelpful ? { increment: 1 } : { same: true }, // Prisma trick or 0
+                        helpfulCount: isHelpful ? { increment: 1 } : { increment: 0 },
                         // actually decrement/increment
                         [isHelpful ? 'helpfulCount' : 'notHelpfulCount']: { increment: 1 },
                         score: isHelpful ? { increment: 1 } : { decrement: 1 },

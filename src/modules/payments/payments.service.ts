@@ -83,6 +83,55 @@ export class PaymentsService {
         const amountInPaise = blog.price * 100;
         const currency = 'INR';
 
+        // Check if using test keys (Mock mode for verification)
+        if (this.config.razorpay.keyId === 'test_key_id') {
+            this.logger.log('Using Mock Payment Order for testing');
+            const mockOrder = {
+                id: `order_${Date.now()}`, // Mock Order ID
+                entity: 'order',
+                amount: amountInPaise,
+                amount_paid: 0,
+                amount_due: amountInPaise,
+                currency: 'INR',
+                receipt: `receipt_${dto.blogId}_${userId}`,
+                status: 'created',
+                attempts: 0,
+                notes: [],
+                created_at: Math.floor(Date.now() / 1000),
+            };
+
+            // Save pending purchase for mock order
+            if (existingPurchase) {
+                await this.prisma.purchase.update({
+                    where: { id: existingPurchase.id },
+                    data: {
+                        orderId: mockOrder.id,
+                        amount: amountInPaise,
+                        currency,
+                        status: 'PENDING',
+                    },
+                });
+            } else {
+                await this.prisma.purchase.create({
+                    data: {
+                        userId,
+                        blogId: dto.blogId,
+                        amount: amountInPaise,
+                        currency,
+                        orderId: mockOrder.id,
+                        status: 'PENDING',
+                    },
+                });
+            }
+
+            return {
+                id: mockOrder.id,
+                amount: Number(mockOrder.amount),
+                currency: mockOrder.currency,
+                key_id: this.config.razorpay.keyId,
+            };
+        }
+
         try {
             const options = {
                 amount: amountInPaise,

@@ -145,7 +145,7 @@ export class BlogsService {
             select: { role: true },
         });
 
-        if (!user || (user.role !== 'CREATOR' && user.role !== 'ADMIN' && user.role !== 'OWNER')) {
+        if (!user || (user.role !== 'USER' && user.role !== 'CREATOR' && user.role !== 'ADMIN' && user.role !== 'OWNER')) {
             throw new ForbiddenException('Only creators can publish blogs');
         }
 
