@@ -58,7 +58,6 @@ type TagRecord = {
     name: string;
     slug: string;
     blogCount: number;
-    description: string | null;
 };
 
 type BlogTagWithBlog = {
