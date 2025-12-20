@@ -70,6 +70,30 @@ $ mau deploy
 
 With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
 
+## Production with Docker & Redis
+
+This project is configured with Docker and Redis caching.
+
+### Prerequisites
+
+- Docker
+- Docker Compose
+
+### Running the Stack
+
+To build and run the API and Redis services:
+
+```bash
+$ docker-compose up --build
+```
+
+The API will be available at `http://localhost:3000`.
+Redis will be available at `http://localhost:6379`.
+
+### Caching
+
+Redis is used for caching responses in `ExploreService` (Trending etc) to improve performance. The default TTL is 10 minutes.
+
 ## Resources
 
 Check out a few resources that may come in handy when working with NestJS:

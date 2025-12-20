@@ -788,7 +788,7 @@ export class BlogsService {
             where: { userId, blogId: { in: blogIds } },
             select: { blogId: true },
         });
-        const likedBlogIds = new Set(likes.map((l: { blogId: string }) => l.blogId));
+        const likedBlogIds = new Set<string>(likes.map((l: { blogId: string }) => l.blogId));
 
         return {
             data: bookmarks

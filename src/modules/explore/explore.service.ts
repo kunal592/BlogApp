@@ -2,6 +2,7 @@ import { Injectable, Logger, Inject } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { PrismaService } from '../../prisma/prisma.service';
+import { Like, Bookmark, Follow } from '@prisma/client';
 import {
     SearchQueryDto,
     FeedQueryDto,
@@ -315,9 +316,9 @@ export class ExploreService {
                 }),
             ]);
 
-            likedBlogs = new Set(likes.map(l => l.blogId));
-            bookmarkedBlogs = new Set(bookmarks.map(b => b.blogId));
-            followingIds = new Set(following.map(f => f.followingId));
+            likedBlogs = new Set(likes.map((l: Like) => l.blogId));
+            bookmarkedBlogs = new Set(bookmarks.map((b: Bookmark) => b.blogId));
+            followingIds = new Set(following.map((f: Follow) => f.followingId));
         }
 
         return {
