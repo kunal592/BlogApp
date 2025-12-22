@@ -1,9 +1,11 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
-import { useRef } from "react";
+import { useState } from "react";
+import { motion, useScroll } from "framer-motion";
 import { dummyBlogs } from "@/lib/dummy-data";
 import { LikeButton, BookmarkButton, FollowButton } from "@/components/ui";
+import { AskAISidebar } from "@/components/ai";
+import { CommunityNotes, AddNoteForm } from "@/components/community";
 
 // Reading Progress Bar Component
 function ReadingProgress() {
@@ -17,19 +19,59 @@ function ReadingProgress() {
     );
 }
 
+// Dummy community notes
+const dummyCommunityNotes = [
+    {
+        id: "1",
+        content: "This article oversimplifies the current state of AI writing tools. While they are improving, they still struggle significantly with technical accuracy in specialized fields.",
+        quote: "AI handles the scaffolding so writers can focus on what matters",
+        author: { name: "Dr. Michael Chen", trustScore: 85 },
+        helpfulVotes: 42,
+        notHelpfulVotes: 8,
+        userVote: null,
+        createdAt: "2024-12-22",
+        authorResponse: "Valid point! I've updated the article to clarify that specialized domains still require human expertise for fact-checking.",
+    },
+    {
+        id: "2",
+        content: "Worth noting that many AI writing tools are trained on data with potential copyright issues. Writers should be aware of the legal landscape.",
+        author: { name: "Legal_Eagle", trustScore: 62 },
+        helpfulVotes: 28,
+        notHelpfulVotes: 3,
+        userVote: null,
+        createdAt: "2024-12-21",
+    },
+];
+
 export default function BlogPage() {
-    const articleRef = useRef<HTMLElement>(null);
-    const blog = dummyBlogs[0]; // Using first dummy blog
+    const blog = dummyBlogs[0];
+    const [isAIOpen, setIsAIOpen] = useState(false);
+    const [showAddNote, setShowAddNote] = useState(false);
+
+    const handleAddNote = async (content: string, quote?: string) => {
+        console.log("Adding note:", { content, quote });
+        // TODO: Implement actual API call
+    };
 
     return (
         <>
             <ReadingProgress />
+            <AskAISidebar
+                blogId={blog.slug}
+                blogTitle={blog.title}
+                isOpen={isAIOpen}
+                onClose={() => setIsAIOpen(false)}
+            />
+            <AddNoteForm
+                isOpen={showAddNote}
+                onClose={() => setShowAddNote(false)}
+                onSubmit={handleAddNote}
+            />
 
-            <article ref={articleRef} className="min-h-screen">
+            <article className="min-h-screen">
                 {/* Hero */}
                 <header className="pt-20 pb-16 px-6">
                     <div className="max-w-3xl mx-auto">
-                        {/* Tag */}
                         <motion.span
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -39,7 +81,6 @@ export default function BlogPage() {
                             {blog.tag}
                         </motion.span>
 
-                        {/* Title */}
                         <motion.h1
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -49,7 +90,6 @@ export default function BlogPage() {
                             {blog.title}
                         </motion.h1>
 
-                        {/* Meta */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -57,7 +97,6 @@ export default function BlogPage() {
                             className="mt-8 flex items-center justify-between"
                         >
                             <div className="flex items-center gap-4">
-                                {/* Avatar */}
                                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--accent)]/30 to-purple-500/20 flex items-center justify-center text-lg font-medium">
                                     {blog.author.name.charAt(0)}
                                 </div>
@@ -93,7 +132,6 @@ export default function BlogPage() {
                     className="px-6 py-16"
                 >
                     <div className="max-w-3xl mx-auto prose-custom">
-                        {/* Rendered Markdown-style content */}
                         <div className="space-y-6">
                             <p className="text-xl text-[var(--muted)] leading-relaxed">
                                 {blog.excerpt}
@@ -104,7 +142,6 @@ export default function BlogPage() {
                                 Modern language models have evolved far beyond simple text completion. They understand context, maintain voice consistency, and can even adapt to specific brand guidelines.
                             </p>
 
-                            {/* Quote Block */}
                             <blockquote className="my-10 pl-6 border-l-2 border-[var(--accent)]">
                                 <p className="text-xl italic text-[var(--foreground)]">
                                     "The goal isn't to replace human creativity, but to amplify it. AI handles the scaffolding so writers can focus on what matters: original thought."
@@ -157,6 +194,17 @@ export default function BlogPage() {
                     </div>
                 </motion.div>
 
+                {/* Community Notes Section */}
+                <section className="px-6 py-12 border-t border-white/10">
+                    <div className="max-w-3xl mx-auto">
+                        <CommunityNotes
+                            notes={dummyCommunityNotes as any}
+                            onVote={async (id, vote) => console.log("Vote:", id, vote)}
+                            onAddNote={() => setShowAddNote(true)}
+                        />
+                    </div>
+                </section>
+
                 {/* Floating Actions */}
                 <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40">
                     <motion.div
@@ -171,14 +219,16 @@ export default function BlogPage() {
                             <span className="text-sm">24</span>
                         </button>
                         <BookmarkButton />
-                        <button className="flex items-center gap-2 text-[var(--muted)] hover:text-white transition-colors">
-                            <span>↗</span>
-                            <span className="text-sm">Share</span>
+                        <button
+                            onClick={() => setIsAIOpen(true)}
+                            className="flex items-center gap-2 text-[var(--muted)] hover:text-[var(--accent)] transition-colors"
+                        >
+                            <span>✦</span>
+                            <span className="text-sm">Ask AI</span>
                         </button>
                     </motion.div>
                 </div>
 
-                {/* Spacer for floating actions */}
                 <div className="h-24" />
             </article>
         </>
