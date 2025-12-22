@@ -1,0 +1,16 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://blog.example.com/sitemap.xml
+
+# Disallow admin/auth pages from indexing
+Disallow: /dashboard/
+Disallow: /login
+Disallow: /register
+Disallow: /write
+
+# Allow all assets
+Allow: /_next/static/
+Allow: /images/
