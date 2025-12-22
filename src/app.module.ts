@@ -26,12 +26,17 @@ import { CommunityModule } from './modules/community/community.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { HealthModule } from './modules/health/health.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
 
 import { BullModule } from '@nestjs/bullmq';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { EmailModule } from './modules/email/email.module';
+
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -41,6 +46,15 @@ import { BullModule } from '@nestjs/bullmq';
       load: [appConfig, authConfig, aiConfig, paymentConfig, storageConfig],
       envFilePath: ['.env.local', '.env'],
     }),
+
+    // Rate Limiting
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 100,
+    }]),
+
+    // Event Emitter
+    EventEmitterModule.forRoot(),
 
     // BullMQ Configuration
     BullModule.forRoot({
@@ -89,6 +103,8 @@ import { BullModule } from '@nestjs/bullmq';
     PaymentsModule,
     NotificationsModule,
     AdminModule,
+    HealthModule,
+    EmailModule,
   ],
   providers: [
     // Global exception filter
@@ -101,6 +117,12 @@ import { BullModule } from '@nestjs/bullmq';
     {
       provide: APP_INTERCEPTOR,
       useClass: TransformInterceptor,
+    },
+
+    // Global Rate Limiting Guard
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
 
     // Global JWT authentication guard
