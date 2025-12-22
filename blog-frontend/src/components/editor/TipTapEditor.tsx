@@ -44,6 +44,7 @@ export function TipTapEditor({
             Underline,
         ],
         content,
+        immediatelyRender: false, // Fix SSR hydration mismatch
         editorProps: {
             attributes: {
                 class: "prose prose-invert prose-lg max-w-none focus:outline-none min-h-[50vh]",
@@ -224,8 +225,8 @@ function ToolbarButton({
             onClick={onClick}
             title={title}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${active
-                    ? "bg-[var(--accent)] text-black"
-                    : "text-[var(--muted)] hover:text-white hover:bg-white/5"
+                ? "bg-[var(--accent)] text-black"
+                : "text-[var(--muted)] hover:text-white hover:bg-white/5"
                 }`}
         >
             {children}
