@@ -2,7 +2,8 @@
 
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
-import { dummyBlogContent, dummyBlogs } from "@/lib/dummy-data";
+import { dummyBlogs } from "@/lib/dummy-data";
+import { LikeButton, BookmarkButton, FollowButton } from "@/components/ui";
 
 // Reading Progress Bar Component
 function ReadingProgress() {
@@ -53,18 +54,21 @@ export default function BlogPage() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.3 }}
-                            className="mt-8 flex items-center gap-4"
+                            className="mt-8 flex items-center justify-between"
                         >
-                            {/* Avatar */}
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--accent)]/30 to-purple-500/20 flex items-center justify-center text-lg font-medium">
-                                {blog.author.name.charAt(0)}
+                            <div className="flex items-center gap-4">
+                                {/* Avatar */}
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--accent)]/30 to-purple-500/20 flex items-center justify-center text-lg font-medium">
+                                    {blog.author.name.charAt(0)}
+                                </div>
+                                <div>
+                                    <p className="font-medium">{blog.author.name}</p>
+                                    <p className="text-sm text-[var(--muted)]">
+                                        {blog.readTime} · Dec 23, 2024
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="font-medium">{blog.author.name}</p>
-                                <p className="text-sm text-[var(--muted)]">
-                                    {blog.readTime} · Dec 23, 2024
-                                </p>
-                            </div>
+                            <FollowButton initialFollowing={false} />
                         </motion.div>
                     </div>
                 </header>
@@ -153,7 +157,7 @@ export default function BlogPage() {
                     </div>
                 </motion.div>
 
-                {/* Actions */}
+                {/* Floating Actions */}
                 <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -161,18 +165,12 @@ export default function BlogPage() {
                         transition={{ delay: 1 }}
                         className="glass px-6 py-3 rounded-full flex items-center gap-6"
                     >
-                        <button className="flex items-center gap-2 text-[var(--muted)] hover:text-white transition-colors">
-                            <span>♡</span>
-                            <span className="text-sm">128</span>
-                        </button>
+                        <LikeButton initialCount={128} />
                         <button className="flex items-center gap-2 text-[var(--muted)] hover:text-white transition-colors">
                             <span>💬</span>
                             <span className="text-sm">24</span>
                         </button>
-                        <button className="flex items-center gap-2 text-[var(--muted)] hover:text-white transition-colors">
-                            <span>⚐</span>
-                            <span className="text-sm">Save</span>
-                        </button>
+                        <BookmarkButton />
                         <button className="flex items-center gap-2 text-[var(--muted)] hover:text-white transition-colors">
                             <span>↗</span>
                             <span className="text-sm">Share</span>
