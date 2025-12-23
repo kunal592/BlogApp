@@ -5,8 +5,11 @@ import Link from "next/link";
 import { BlogCard } from "@/components/blog";
 import { dummyBlogs } from "@/lib/dummy-data";
 import { GradientOrbs, MouseParallax, ScrollReveal, TiltCard } from "@/components/effects";
+import { useAuthStore } from "@/store/auth.store";
 
 export default function HomePage() {
+  const { isAuthenticated } = useAuthStore();
+
   return (
     <>
       {/* Hero Section with Water Effects */}
@@ -97,37 +100,39 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="px-6 py-32 bg-gradient-to-b from-transparent to-white/[0.02] relative overflow-hidden">
-        {/* Subtle background glow */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: "radial-gradient(circle at 50% 100%, rgba(94, 158, 255, 0.05) 0%, transparent 50%)",
-          }}
-        />
+      {/* CTA Section - Only show for non-authenticated users */}
+      {!isAuthenticated && (
+        <section className="px-6 py-32 bg-gradient-to-b from-transparent to-white/[0.02] relative overflow-hidden">
+          {/* Subtle background glow */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: "radial-gradient(circle at 50% 100%, rgba(94, 158, 255, 0.05) 0%, transparent 50%)",
+            }}
+          />
 
-        <div className="max-w-2xl mx-auto text-center relative z-10">
-          <ScrollReveal>
-            <h2 className="text-4xl font-bold">
-              Ready to share your ideas?
-            </h2>
-          </ScrollReveal>
-          <ScrollReveal delay={0.1}>
-            <p className="mt-4 text-xl text-[var(--muted)]">
-              Join thousands of writers building their audience.
-            </p>
-          </ScrollReveal>
-          <ScrollReveal delay={0.2}>
-            <Link
-              href="/register"
-              className="mt-8 inline-block px-10 py-4 bg-white text-black font-semibold rounded-full hover:bg-white/90 transition-colors"
-            >
-              Create Free Account
-            </Link>
-          </ScrollReveal>
-        </div>
-      </section>
+          <div className="max-w-2xl mx-auto text-center relative z-10">
+            <ScrollReveal>
+              <h2 className="text-4xl font-bold">
+                Ready to share your ideas?
+              </h2>
+            </ScrollReveal>
+            <ScrollReveal delay={0.1}>
+              <p className="mt-4 text-xl text-[var(--muted)]">
+                Join thousands of writers building their audience.
+              </p>
+            </ScrollReveal>
+            <ScrollReveal delay={0.2}>
+              <Link
+                href="/register"
+                className="mt-8 inline-block px-10 py-4 bg-white text-black font-semibold rounded-full hover:bg-white/90 transition-colors"
+              >
+                Create Free Account
+              </Link>
+            </ScrollReveal>
+          </div>
+        </section>
+      )}
     </>
   );
 }

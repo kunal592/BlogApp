@@ -215,11 +215,16 @@ export class ExploreService {
         const skip = (page - 1) * limit;
         const cacheKey = `trending:${period}:${page}:${limit}`;
 
-        // Check cache
-        const cached = await this.cacheManager.get<{ blogs: any[], total: number }>(cacheKey);
-
         let blogsResult: any[];
         let totalResult: number;
+        let cached: { blogs: any[], total: number } | null = null;
+
+        // Try to get from cache, but don't fail if cache is unavailable
+        try {
+            cached = await this.cacheManager.get<{ blogs: any[], total: number }>(cacheKey) ?? null;
+        } catch (err) {
+            this.logger.warn('Cache get failed, falling back to database', err);
+        }
 
         if (cached) {
             blogsResult = cached.blogs;
@@ -281,8 +286,12 @@ export class ExploreService {
             blogsResult = blogs;
             totalResult = total;
 
-            // Cache for 10 minutes
-            await this.cacheManager.set(cacheKey, { blogs: blogsResult, total: totalResult }, 600 * 1000);
+            // Try to cache, but don't fail if cache is unavailable
+            try {
+                await this.cacheManager.set(cacheKey, { blogs: blogsResult, total: totalResult }, 600 * 1000);
+            } catch (err) {
+                this.logger.warn('Cache set failed', err);
+            }
         }
 
         // Get User Interactions (Likes/Bookmarks) if logged in

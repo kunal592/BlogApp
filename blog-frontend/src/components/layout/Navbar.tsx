@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "@/store/auth.store";
 import { authService } from "@/services/auth.service";
+import { notificationService } from "@/services/notification.service";
 
 export function Navbar() {
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
     const userMenuRef = useRef<HTMLDivElement>(null);
     const { scrollY } = useScroll();
 
@@ -29,6 +31,23 @@ export function Navbar() {
         };
         checkAuth();
     }, [setUser, setLoading]);
+
+    // Fetch unread notification count
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        const fetchUnread = async () => {
+            try {
+                const count = await notificationService.getUnreadCount();
+                setUnreadCount(count);
+            } catch {
+                // Ignore errors
+            }
+        };
+        fetchUnread();
+        // Poll every 60 seconds
+        const interval = setInterval(fetchUnread, 60000);
+        return () => clearInterval(interval);
+    }, [isAuthenticated]);
 
     // Close user menu when clicking outside
     useEffect(() => {
@@ -57,6 +76,7 @@ export function Navbar() {
     const opacity = useTransform(scrollY, [0, 100], [0.6, 0.95]);
 
     const userInitial = user?.name?.charAt(0) || user?.email?.charAt(0) || "?";
+
 
     return (
         <motion.header
@@ -93,6 +113,19 @@ export function Navbar() {
                                     className="text-sm px-4 py-2 bg-white text-black rounded-full font-medium hover:bg-white/90 transition-colors"
                                 >
                                     Write
+                                </Link>
+
+                                {/* Notification Bell */}
+                                <Link
+                                    href="/notifications"
+                                    className="relative text-[var(--muted)] hover:text-white transition-colors"
+                                >
+                                    <span className="text-xl">🔔</span>
+                                    {unreadCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                                            {unreadCount > 9 ? '9+' : unreadCount}
+                                        </span>
+                                    )}
                                 </Link>
 
                                 {/* User Menu */}

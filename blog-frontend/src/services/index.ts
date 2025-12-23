@@ -1,3 +1,9 @@
 export { authService } from './auth.service';
 export { mediaService } from './media.service';
 export { blogService } from './blog.service';
+export { userService } from './user.service';
+export { exploreService } from './explore.service';
+export { notificationService } from './notification.service';
+export { aiService } from './ai.service';
+export { paymentService } from './payment.service';
+export { commentService } from './comment.service';
