@@ -42,6 +42,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        {/* Razorpay Checkout Script */}
+        <script src="https://checkout.razorpay.com/v1/checkout.js" async />
+      </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <SkipLink />
         <Providers>

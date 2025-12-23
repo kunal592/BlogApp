@@ -2,11 +2,24 @@
 @import "../styles/glass.css";
 @import "../styles/scroll.css";
 
+/* Dark Theme (Default) */
 :root {
   --background: #0B0B0C;
   --foreground: #F5F5F7;
   --muted: #A1A1A6;
   --accent: #5E9EFF;
+  --card-bg: rgba(255, 255, 255, 0.03);
+  --border: rgba(255, 255, 255, 0.1);
+}
+
+/* Light Theme */
+.light {
+  --background: #FFFFFF;
+  --foreground: #1A1A1A;
+  --muted: #6B7280;
+  --accent: #3B82F6;
+  --card-bg: rgba(0, 0, 0, 0.02);
+  --border: rgba(0, 0, 0, 0.1);
 }
 
 @theme inline {
@@ -26,8 +39,56 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   overscroll-behavior: none;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 ::selection {
   background: rgba(94, 158, 255, 0.25);
+}
+
+.light ::selection {
+  background: rgba(59, 130, 246, 0.25);
+}
+
+/* Glass effect adjustments for light mode */
+.light .glass {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.light .glass-subtle {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Prose adjustments for light mode */
+.light .prose {
+  color: #374151;
+}
+
+.light .prose h1,
+.light .prose h2,
+.light .prose h3,
+.light .prose h4 {
+  color: #111827;
+}
+
+.light .prose a {
+  color: var(--accent);
+}
+
+.light .prose code {
+  background: rgba(0, 0, 0, 0.05);
+  color: #1F2937;
+}
+
+.light .prose pre {
+  background: #1F2937;
+  color: #F9FAFB;
+}
+
+.light .prose blockquote {
+  border-left-color: var(--accent);
+  color: #4B5563;
 }

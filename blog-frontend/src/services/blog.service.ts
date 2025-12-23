@@ -8,7 +8,7 @@ export interface Blog {
     excerpt?: string;
     coverImage?: string;
     status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-    isPremium: boolean;
+    isExclusive: boolean;
     price?: number;
     readTime?: number;
     viewCount: number;
@@ -24,6 +24,7 @@ export interface Blog {
     tags?: { id: string; name: string; slug: string }[];
     isLiked?: boolean;
     isBookmarked?: boolean;
+    isPurchased?: boolean;
     createdAt: string;
     updatedAt: string;
     publishedAt?: string;

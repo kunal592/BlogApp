@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, useScroll } from "framer-motion";
 import { blogService, Blog } from "@/services/blog.service";
 import { commentService, Comment as CommentType } from "@/services/comment.service";
 import { userService } from "@/services/user.service";
+import { paymentService } from "@/services/payment.service";
 import { LikeButton, BookmarkButton, FollowButton, Button, Input } from "@/components/ui";
 import { AskAISidebar } from "@/components/ai";
 import { useAuthStore } from "@/store/auth.store";
@@ -84,8 +85,9 @@ function Comment({ comment, onReply, onLike, onUnlike, currentUserId }: {
 
 export default function BlogPage() {
     const params = useParams();
+    const router = useRouter();
     const slug = params.slug as string;
-    const { user } = useAuthStore();
+    const { user, isAuthenticated } = useAuthStore();
 
     const [blog, setBlog] = useState<Blog | null>(null);
     const [comments, setComments] = useState<CommentType[]>([]);
@@ -98,6 +100,9 @@ export default function BlogPage() {
     const [isLiked, setIsLiked] = useState(false);
     const [isBookmarked, setIsBookmarked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
+    const [isPurchased, setIsPurchased] = useState(false);
+    const [isPurchasing, setIsPurchasing] = useState(false);
+    const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
     useEffect(() => {
         const loadBlog = async () => {
@@ -107,6 +112,7 @@ export default function BlogPage() {
                 setIsLiked(data.isLiked || false);
                 setIsBookmarked(data.isBookmarked || false);
                 setLikeCount(data.likeCount);
+                setIsPurchased(data.isPurchased || false);
 
                 // Record view
                 blogService.recordView(data.id).catch(() => { });
@@ -152,6 +158,60 @@ export default function BlogPage() {
             }
         } catch (err) {
             console.error("Bookmark error:", err);
+        }
+    };
+
+    const handlePurchase = async () => {
+        if (!blog || !isAuthenticated) {
+            router.push('/login');
+            return;
+        }
+
+        setIsPurchasing(true);
+        setPurchaseError(null);
+
+        try {
+            // Create Razorpay order
+            const order = await paymentService.createOrder(blog.id);
+
+            // Load Razorpay
+            const options = {
+                key: order.key_id,
+                amount: order.amount,
+                currency: order.currency,
+                name: 'BlogApp Premium',
+                description: `Unlock: ${blog.title}`,
+                order_id: order.id,
+                handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
+                    try {
+                        await paymentService.verifyPayment({
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_signature: response.razorpay_signature,
+                        });
+                        setIsPurchased(true);
+                        // Reload the blog to get full content
+                        const data = await blogService.getBySlug(slug);
+                        setBlog(data);
+                    } catch (err) {
+                        setPurchaseError('Payment verification failed');
+                    }
+                },
+                prefill: {
+                    email: user?.email || '',
+                },
+                theme: {
+                    color: '#5E9EFF',
+                },
+            };
+
+            // @ts-ignore - Razorpay is loaded via script
+            const razorpay = new window.Razorpay(options);
+            razorpay.open();
+        } catch (err: any) {
+            setPurchaseError(err.message || 'Failed to initiate payment');
+        } finally {
+            setIsPurchasing(false);
         }
     };
 
@@ -244,15 +304,22 @@ export default function BlogPage() {
                 {/* Hero */}
                 <header className="pt-20 pb-16 px-6">
                     <div className="max-w-3xl mx-auto">
-                        {blog.tags?.[0] && (
-                            <motion.span
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="text-sm text-[var(--accent)] font-medium"
-                            >
-                                {blog.tags[0].name}
-                            </motion.span>
-                        )}
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex items-center gap-3"
+                        >
+                            {blog.tags?.[0] && (
+                                <span className="text-sm text-[var(--accent)] font-medium">
+                                    {blog.tags[0].name}
+                                </span>
+                            )}
+                            {blog.isExclusive && (
+                                <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 font-medium">
+                                    ⭐ Premium
+                                </span>
+                            )}
+                        </motion.div>
 
                         <motion.h1
                             initial={{ opacity: 0, y: 20 }}
@@ -304,17 +371,76 @@ export default function BlogPage() {
                     </motion.div>
                 )}
 
-                {/* Content */}
-                <motion.div
-                    initial={{ opacity: 0, y: 40 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="px-6 py-16"
-                >
-                    <div className="max-w-3xl mx-auto prose prose-invert prose-lg"
-                        dangerouslySetInnerHTML={{ __html: blog.content }}
-                    />
-                </motion.div>
+                {/* Content or Paywall */}
+                {blog.isExclusive && !isPurchased && blog.author.id !== user?.id ? (
+                    /* Paywall */
+                    <motion.div
+                        initial={{ opacity: 0, y: 40 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="px-6 py-16"
+                    >
+                        <div className="max-w-3xl mx-auto">
+                            {/* Preview excerpt */}
+                            {blog.excerpt && (
+                                <div className="prose prose-invert prose-lg mb-8 relative">
+                                    <p className="text-[var(--muted)]">{blog.excerpt}</p>
+                                    <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[var(--background)] to-transparent" />
+                                </div>
+                            )}
+
+                            {/* Paywall Box */}
+                            <div className="relative">
+                                <div className="glass rounded-2xl p-8 md:p-12 text-center border border-[var(--accent)]/30">
+                                    <div className="w-16 h-16 rounded-full bg-[var(--accent)]/20 flex items-center justify-center mx-auto mb-6">
+                                        <span className="text-3xl">🔐</span>
+                                    </div>
+                                    <h3 className="text-2xl font-bold mb-2">Premium Content</h3>
+                                    <p className="text-[var(--muted)] mb-6 max-w-md mx-auto">
+                                        This article is exclusive. Purchase to unlock the full content.
+                                    </p>
+
+                                    <div className="mb-6">
+                                        <span className="text-4xl font-bold text-[var(--accent)]">
+                                            ₹{((blog.price || 0) / 100).toFixed(0)}
+                                        </span>
+                                        <span className="text-[var(--muted)] ml-2">one-time</span>
+                                    </div>
+
+                                    {purchaseError && (
+                                        <p className="text-red-400 text-sm mb-4">{purchaseError}</p>
+                                    )}
+
+                                    <Button
+                                        variant="primary"
+                                        size="lg"
+                                        onClick={handlePurchase}
+                                        isLoading={isPurchasing}
+                                        className="px-12"
+                                    >
+                                        {isAuthenticated ? 'Unlock Now' : 'Login to Purchase'}
+                                    </Button>
+
+                                    <p className="text-xs text-[var(--muted)] mt-4">
+                                        Secure payment via Razorpay. 80% goes to the author.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                ) : (
+                    /* Full Content */
+                    <motion.div
+                        initial={{ opacity: 0, y: 40 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="px-6 py-16"
+                    >
+                        <div className="max-w-3xl mx-auto prose prose-invert prose-lg"
+                            dangerouslySetInnerHTML={{ __html: blog.content }}
+                        />
+                    </motion.div>
+                )}
 
                 {/* Comments Section */}
                 <section className="px-6 py-12 border-t border-white/10">

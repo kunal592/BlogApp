@@ -7,6 +7,7 @@ import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 import { useAuthStore } from "@/store/auth.store";
 import { authService } from "@/services/auth.service";
 import { notificationService } from "@/services/notification.service";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export function Navbar() {
     const router = useRouter();
@@ -98,27 +99,29 @@ export function Navbar() {
                     </Link>
 
                     {/* Desktop Navigation */}
-                    <div className="hidden md:flex items-center gap-8">
+                    <div className="hidden md:flex items-center gap-6">
                         <Link
                             href="/explore"
-                            className="text-sm text-[var(--muted)] hover:text-white transition-colors"
+                            className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
                         >
                             Explore
                         </Link>
+
+                        {/* Theme Toggle */}
+                        <ThemeToggle />
 
                         {isAuthenticated && user ? (
                             <>
                                 <Link
                                     href="/write"
-                                    className="text-sm px-4 py-2 bg-white text-black rounded-full font-medium hover:bg-white/90 transition-colors"
+                                    className="text-sm px-4 py-2 bg-[var(--accent)] text-white rounded-full font-medium hover:opacity-90 transition-opacity"
                                 >
                                     Write
                                 </Link>
 
-                                {/* Notification Bell */}
                                 <Link
                                     href="/notifications"
-                                    className="relative text-[var(--muted)] hover:text-white transition-colors"
+                                    className="relative text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
                                 >
                                     <span className="text-xl">🔔</span>
                                     {unreadCount > 0 && (
@@ -160,10 +163,10 @@ export function Navbar() {
                                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                                 transition={{ duration: 0.15 }}
-                                                className="absolute right-0 mt-2 w-56 py-2 rounded-xl bg-[#1a1a1c] border border-white/10 shadow-xl"
+                                                className="absolute right-0 mt-2 w-56 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] shadow-xl"
                                             >
                                                 {/* User Info */}
-                                                <div className="px-4 py-3 border-b border-white/10">
+                                                <div className="px-4 py-3 border-b border-[var(--border)]">
                                                     <p className="font-medium truncate">{user.name || user.username || "User"}</p>
                                                     <p className="text-sm text-[var(--muted)] truncate">{user.email}</p>
                                                 </div>
@@ -172,21 +175,21 @@ export function Navbar() {
                                                 <div className="py-1">
                                                     <Link
                                                         href="/dashboard"
-                                                        className="block px-4 py-2 text-sm text-[var(--muted)] hover:text-white hover:bg-white/5 transition-colors"
+                                                        className="block px-4 py-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
                                                         onClick={() => setIsUserMenuOpen(false)}
                                                     >
                                                         📊 Dashboard
                                                     </Link>
                                                     <Link
                                                         href="/dashboard/articles"
-                                                        className="block px-4 py-2 text-sm text-[var(--muted)] hover:text-white hover:bg-white/5 transition-colors"
+                                                        className="block px-4 py-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
                                                         onClick={() => setIsUserMenuOpen(false)}
                                                     >
                                                         📝 My Articles
                                                     </Link>
                                                     <Link
                                                         href="/dashboard/settings"
-                                                        className="block px-4 py-2 text-sm text-[var(--muted)] hover:text-white hover:bg-white/5 transition-colors"
+                                                        className="block px-4 py-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
                                                         onClick={() => setIsUserMenuOpen(false)}
                                                     >
                                                         ⚙️ Settings
@@ -194,10 +197,10 @@ export function Navbar() {
                                                 </div>
 
                                                 {/* Logout */}
-                                                <div className="border-t border-white/10 pt-1">
+                                                <div className="border-t border-[var(--border)] pt-1">
                                                     <button
                                                         onClick={handleLogout}
-                                                        className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5 transition-colors"
+                                                        className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-[var(--card-bg)] transition-colors"
                                                     >
                                                         🚪 Log out
                                                     </button>
@@ -211,13 +214,13 @@ export function Navbar() {
                             <>
                                 <Link
                                     href="/login"
-                                    className="text-sm text-[var(--muted)] hover:text-white transition-colors"
+                                    className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
                                 >
                                     Login
                                 </Link>
                                 <Link
                                     href="/write"
-                                    className="text-sm px-4 py-2 bg-white text-black rounded-full font-medium hover:bg-white/90 transition-colors"
+                                    className="text-sm px-4 py-2 bg-[var(--accent)] text-white rounded-full font-medium hover:opacity-90 transition-opacity"
                                 >
                                     Write
                                 </Link>

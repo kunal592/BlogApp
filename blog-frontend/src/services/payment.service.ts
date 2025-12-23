@@ -1,21 +1,16 @@
 import { api } from '@/lib/api-client';
 
-export interface CreateOrderDto {
-    blogId: string;
-    amount: number;
-}
-
 export interface OrderResponse {
-    orderId: string;
-    amount: number;
-    currency: string;
-    key: string;
+    id: string;         // Razorpay order ID
+    amount: number;     // Amount in paise
+    currency: string;   // 'INR'
+    key_id: string;     // Razorpay key ID for frontend
 }
 
 export interface VerifyPaymentDto {
-    orderId: string;
-    paymentId: string;
-    signature: string;
+    razorpay_payment_id: string;
+    razorpay_order_id: string;
+    razorpay_signature: string;
 }
 
 export interface PurchaseHistory {
@@ -25,11 +20,12 @@ export interface PurchaseHistory {
     blogSlug: string;
     amount: number;
     purchasedAt: string;
+    status: string;
 }
 
 export const paymentService = {
-    async createOrder(dto: CreateOrderDto): Promise<OrderResponse> {
-        const response = await api.post<{ data: OrderResponse }>('/payments/order', dto);
+    async createOrder(blogId: string): Promise<OrderResponse> {
+        const response = await api.post<{ data: OrderResponse }>('/payments/order', { blogId });
         return response.data;
     },
 

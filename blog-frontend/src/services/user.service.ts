@@ -66,7 +66,7 @@ export const userService = {
     },
 
     async upgradeToCreator(): Promise<UserProfile> {
-        const response = await api.post<{ data: UserProfile; message: string }>('/users/upgrade-creator', {});
+        const response = await api.post<{ data: UserProfile; message: string }>('/users/upgrade-to-creator', {});
         return response.data;
     },
 
