@@ -16,6 +16,8 @@ import {
     VerifyPaymentDto,
     OrderResponseDto,
     PurchaseHistoryDto,
+    CreatorEarningsDto,
+    EarningItemDto,
 } from './payments.dto';
 
 @Injectable()
@@ -218,6 +220,10 @@ export class PaymentsService {
             throw new BadRequestException('Invalid payment signature');
         }
 
+        // Platform fee percent from config
+        const platformFeePercent = this.config.payout.platformFeePercent;
+        const creatorPercent = 100 - platformFeePercent;
+
         // Ledger Logic
         await this.prisma.$transaction(async (tx) => {
             // 1. Mark purchase as completed
@@ -232,7 +238,7 @@ export class PaymentsService {
             });
 
             const amount = updatedPurchase.amount; // In paise
-            const creatorShare = Math.floor(amount * 0.70);
+            const creatorShare = Math.floor(amount * (creatorPercent / 100));
             const platformShare = amount - creatorShare;
 
             // 2. Get or Create Creator Wallet
@@ -257,19 +263,15 @@ export class PaymentsService {
                     metadata: {
                         blogId: updatedPurchase.blogId,
                         purchaserId: userId,
+                        grossAmount: amount,
+                        platformFee: platformShare,
+                        platformFeePercent,
                         description: `Revenue from blog sale: ${updatedPurchase.blog.title}`
                     }
                 }
             });
 
-            // 4. Record Platform Fee (No specific wallet, just a record, or could go to an Admin Wallet)
-            // For now, we just track the split in the logs or analytics.
-            // In a real system, we'd have a 'Platform Wallet'.
-            // Let's create a 'Platform' record attached to the Creator's wallet metadata or similar?
-            // Actually, the Ledger usually tracks specific account movements.
-            // We will just log it for now as the prompt asked for "Append-only ledger" generally.    
-
-            this.logger.log(`Purchase ${purchase.id} split: Creator ${creatorShare}, Platform ${platformShare}`);
+            this.logger.log(`Purchase ${purchase.id} split: Creator ${creatorShare} (${creatorPercent}%), Platform ${platformShare} (${platformFeePercent}%)`);
         });
 
         this.logger.log(`Payment confirmed for user ${userId}, blog ${purchase.blogId}`);
@@ -306,5 +308,76 @@ export class PaymentsService {
             createdAt: p.createdAt,
             blog: p.blog,
         }));
+    }
+
+    /**
+     * Get creator earnings
+     */
+    async getCreatorEarnings(userId: string): Promise<CreatorEarningsDto> {
+        const platformFeePercent = this.config.payout.platformFeePercent;
+
+        // Get all completed purchases for blogs authored by this user
+        const purchases = await this.prisma.purchase.findMany({
+            where: {
+                status: 'COMPLETED',
+                blog: {
+                    authorId: userId,
+                },
+            },
+            include: {
+                blog: {
+                    select: {
+                        id: true,
+                        title: true,
+                        slug: true,
+                    },
+                },
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        username: true,
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        // Calculate totals
+        let totalGross = 0;
+        let totalPlatformFees = 0;
+        let totalNet = 0;
+
+        const earnings: EarningItemDto[] = purchases.map((p) => {
+            const grossAmount = p.amount; // In paise
+            const platformFee = Math.floor(grossAmount * (platformFeePercent / 100));
+            const netAmount = grossAmount - platformFee;
+
+            totalGross += grossAmount;
+            totalPlatformFees += platformFee;
+            totalNet += netAmount;
+
+            return {
+                id: p.id,
+                grossAmount,
+                netAmount,
+                platformFee,
+                createdAt: p.createdAt,
+                blog: p.blog,
+                buyer: {
+                    id: p.user.id,
+                    name: p.user.name,
+                    username: p.user.username,
+                },
+            };
+        });
+
+        return {
+            totalEarnings: totalNet,
+            platformFees: totalPlatformFees,
+            totalSales: purchases.length,
+            platformFeePercent,
+            earnings,
+        };
     }
 }

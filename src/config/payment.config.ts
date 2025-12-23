@@ -19,6 +19,6 @@ export default registerAs('payment', () => ({
     // Creator payouts
     payout: {
         minAmount: parseFloat(process.env.MIN_PAYOUT_AMOUNT || '500.00'), // INR
-        platformFeePercent: parseFloat(process.env.PLATFORM_FEE_PERCENT || '20'), // 20%
+        platformFeePercent: parseFloat(process.env.PLATFORM_FEE_PERCENT || '30'), // 30%
     },
 }));

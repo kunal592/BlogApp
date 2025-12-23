@@ -23,6 +23,32 @@ export interface PurchaseHistory {
     status: string;
 }
 
+export interface EarningItem {
+    id: string;
+    grossAmount: number;  // In paise
+    netAmount: number;    // In paise (after platform fee)
+    platformFee: number;  // In paise
+    createdAt: string;
+    blog: {
+        id: string;
+        title: string;
+        slug: string;
+    };
+    buyer: {
+        id: string;
+        name: string | null;
+        username: string | null;
+    };
+}
+
+export interface CreatorEarnings {
+    totalEarnings: number;      // In paise
+    platformFees: number;       // In paise
+    totalSales: number;
+    platformFeePercent: number;
+    earnings: EarningItem[];
+}
+
 export const paymentService = {
     async createOrder(blogId: string): Promise<OrderResponse> {
         const response = await api.post<{ data: OrderResponse }>('/payments/order', { blogId });
@@ -36,6 +62,11 @@ export const paymentService = {
 
     async getHistory(): Promise<PurchaseHistory[]> {
         const response = await api.get<{ data: PurchaseHistory[] }>('/payments/history');
+        return response.data;
+    },
+
+    async getEarnings(): Promise<CreatorEarnings> {
+        const response = await api.get<{ data: CreatorEarnings }>('/payments/earnings');
         return response.data;
     },
 };

@@ -16,11 +16,13 @@ import {
 import { PaymentsService } from './payments.service';
 import { PAYMENTS_API } from './payments.api';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 import {
     CreateOrderDto,
     VerifyPaymentDto,
     OrderResponseDto,
     PurchaseHistoryDto,
+    CreatorEarningsDto,
 } from './payments.dto';
 
 @ApiTags('Payments')
@@ -91,6 +93,29 @@ export class PaymentsController {
         @CurrentUser('id') userId: string,
     ): Promise<{ data: PurchaseHistoryDto[] }> {
         const data = await this.paymentsService.getHistory(userId);
+        return { data };
+    }
+
+    /**
+     * GET /payments/earnings
+     * Get creator's earnings
+     */
+    @Get('earnings')
+    @HttpCode(HttpStatus.OK)
+    @Roles('CREATOR', 'ADMIN', 'OWNER')
+    @ApiCookieAuth('access_token')
+    @ApiBearerAuth('bearer')
+    @ApiOperation({
+        summary: 'Get creator earnings',
+        description: 'Get earning statistics and history for the current creator.',
+    })
+    @ApiResponse({ status: 200, description: 'Earnings retrieved', type: CreatorEarningsDto })
+    @ApiResponse({ status: 401, description: 'Not authenticated' })
+    @ApiResponse({ status: 403, description: 'Not a creator' })
+    async getCreatorEarnings(
+        @CurrentUser('id') userId: string,
+    ): Promise<{ data: CreatorEarningsDto }> {
+        const data = await this.paymentsService.getCreatorEarnings(userId);
         return { data };
     }
 }

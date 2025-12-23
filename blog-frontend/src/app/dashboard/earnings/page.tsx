@@ -1,50 +1,100 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui";
+import { paymentService, CreatorEarnings, EarningItem } from "@/services/payment.service";
+import { useAuthStore } from "@/store/auth.store";
 
-interface EarningsData {
-    balance: number;
-    pendingPayout: number;
-    lifetimeEarnings: number;
-    thisMonth: number;
-    lastMonth: number;
-    transactions: Transaction[];
+function formatCurrency(paise: number): string {
+    return `₹${(paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 }
 
-interface Transaction {
-    id: string;
-    type: "earning" | "withdrawal" | "tip";
-    amount: number;
-    description: string;
-    date: string;
-    status: "completed" | "pending";
+function formatDate(dateString: string): string {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+    });
 }
-
-// Dummy data
-const dummyEarnings: EarningsData = {
-    balance: 12450,
-    pendingPayout: 3200,
-    lifetimeEarnings: 145600,
-    thisMonth: 8750,
-    lastMonth: 6200,
-    transactions: [
-        { id: "1", type: "earning", amount: 250, description: "Article: Future of AI", date: "Dec 22", status: "completed" },
-        { id: "2", type: "earning", amount: 180, description: "Article: Building in Public", date: "Dec 21", status: "completed" },
-        { id: "3", type: "tip", amount: 500, description: "Tip from @reader123", date: "Dec 20", status: "completed" },
-        { id: "4", type: "withdrawal", amount: -5000, description: "Bank withdrawal", date: "Dec 18", status: "completed" },
-        { id: "5", type: "earning", amount: 320, description: "Article: Design Systems", date: "Dec 17", status: "pending" },
-    ],
-};
 
 export default function EarningsPage() {
-    const [earnings] = useState<EarningsData>(dummyEarnings);
-    const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+    const { user, isAuthenticated } = useAuthStore();
+    const [earnings, setEarnings] = useState<CreatorEarnings | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const percentChange = earnings.lastMonth > 0
-        ? Math.round(((earnings.thisMonth - earnings.lastMonth) / earnings.lastMonth) * 100)
-        : 0;
+    const isCreator = user?.role === 'CREATOR' || user?.role === 'ADMIN' || user?.role === 'OWNER';
+
+    useEffect(() => {
+        const fetchEarnings = async () => {
+            if (!isAuthenticated || !isCreator) {
+                setLoading(false);
+                return;
+            }
+
+            try {
+                const data = await paymentService.getEarnings();
+                setEarnings(data);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Failed to load earnings");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchEarnings();
+    }, [isAuthenticated, isCreator]);
+
+    if (!isAuthenticated) {
+        return (
+            <div className="min-h-screen pt-24 px-6 flex items-center justify-center">
+                <div className="text-center">
+                    <h1 className="text-2xl font-bold mb-2">Login Required</h1>
+                    <p className="text-[var(--muted)] mb-4">Please login to view your earnings</p>
+                    <Link href="/login" className="text-[var(--accent)] hover:underline">
+                        Go to Login
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    if (!isCreator) {
+        return (
+            <div className="min-h-screen pt-24 px-6 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-20 h-20 rounded-full bg-[var(--card-bg)] flex items-center justify-center mx-auto mb-6">
+                        <span className="text-4xl">✨</span>
+                    </div>
+                    <h1 className="text-2xl font-bold mb-2">Become a Creator</h1>
+                    <p className="text-[var(--muted)] mb-6 max-w-md">
+                        Upgrade to a creator account to publish premium blogs and start earning
+                    </p>
+                    <Link
+                        href="/dashboard/settings"
+                        className="inline-block px-6 py-3 bg-[var(--accent)] text-white rounded-full font-medium hover:opacity-90 transition-opacity"
+                    >
+                        Upgrade Now
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    if (loading) {
+        return (
+            <div className="min-h-screen pt-8 pb-24 px-6">
+                <div className="max-w-5xl mx-auto">
+                    <div className="h-8 w-48 bg-[var(--card-bg)] rounded animate-pulse mb-8" />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        {[1, 2, 3].map((i) => (
+                            <div key={i} className="h-32 bg-[var(--card-bg)] rounded-xl animate-pulse" />
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen pt-8 pb-24 px-6">
@@ -52,252 +102,172 @@ export default function EarningsPage() {
                 {/* Header */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold">Earnings</h1>
-                    <p className="text-[var(--muted)] mt-1">Track your revenue and manage payouts</p>
+                    <p className="text-[var(--muted)] mt-1">
+                        Track your revenue from premium content sales
+                    </p>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                    <StatCard
-                        label="Available Balance"
-                        value={`₹${earnings.balance.toLocaleString()}`}
-                        action={
-                            <Button size="sm" onClick={() => setShowWithdrawModal(true)}>
-                                Withdraw
-                            </Button>
-                        }
-                    />
-                    <StatCard
-                        label="This Month"
-                        value={`₹${earnings.thisMonth.toLocaleString()}`}
-                        change={percentChange}
-                    />
-                    <StatCard
-                        label="Lifetime Earnings"
-                        value={`₹${earnings.lifetimeEarnings.toLocaleString()}`}
-                        subtitle="Since Dec 2023"
-                    />
-                </div>
-
-                {/* Earnings Breakdown */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Chart Placeholder */}
-                    <div className="lg:col-span-2 glass-subtle rounded-2xl p-6">
-                        <h2 className="text-lg font-semibold mb-6">Earnings Over Time</h2>
-                        <div className="h-64 flex items-end justify-around gap-2">
-                            {[40, 65, 45, 80, 55, 90, 75, 60, 85, 70, 95, 88].map((height, i) => (
-                                <motion.div
-                                    key={i}
-                                    initial={{ height: 0 }}
-                                    animate={{ height: `${height}%` }}
-                                    transition={{ delay: i * 0.05, duration: 0.5 }}
-                                    className="flex-1 bg-[var(--accent)]/30 rounded-t hover:bg-[var(--accent)]/50 transition-colors cursor-pointer"
-                                    title={`Month ${i + 1}`}
-                                />
-                            ))}
-                        </div>
-                        <div className="flex justify-between mt-4 text-xs text-[var(--muted)]">
-                            <span>Jan</span>
-                            <span>Feb</span>
-                            <span>Mar</span>
-                            <span>Apr</span>
-                            <span>May</span>
-                            <span>Jun</span>
-                            <span>Jul</span>
-                            <span>Aug</span>
-                            <span>Sep</span>
-                            <span>Oct</span>
-                            <span>Nov</span>
-                            <span>Dec</span>
-                        </div>
+                {error && (
+                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 mb-6">
+                        {error}
                     </div>
+                )}
 
-                    {/* Revenue Split */}
-                    <div className="glass-subtle rounded-2xl p-6">
-                        <h2 className="text-lg font-semibold mb-6">Revenue Split</h2>
-                        <div className="space-y-4">
-                            <SplitRow label="Your Share (70%)" value={8750 * 0.7} color="var(--accent)" />
-                            <SplitRow label="Platform (30%)" value={8750 * 0.3} color="white/30" />
+                {earnings && (
+                    <>
+                        {/* Stats Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="glass p-6 rounded-2xl"
+                            >
+                                <div className="text-[var(--muted)] text-sm mb-1">💰 Total Earnings</div>
+                                <div className="text-3xl font-bold text-green-400">
+                                    {formatCurrency(earnings.totalEarnings)}
+                                </div>
+                                <div className="text-xs text-[var(--muted)] mt-2">
+                                    After {earnings.platformFeePercent}% platform fee
+                                </div>
+                            </motion.div>
+
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.1 }}
+                                className="glass p-6 rounded-2xl"
+                            >
+                                <div className="text-[var(--muted)] text-sm mb-1">📈 Total Sales</div>
+                                <div className="text-3xl font-bold">
+                                    {earnings.totalSales}
+                                </div>
+                                <div className="text-xs text-[var(--muted)] mt-2">
+                                    Premium blog purchases
+                                </div>
+                            </motion.div>
+
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 }}
+                                className="glass p-6 rounded-2xl"
+                            >
+                                <div className="text-[var(--muted)] text-sm mb-1">🏢 Platform Fees</div>
+                                <div className="text-3xl font-bold text-[var(--muted)]">
+                                    {formatCurrency(earnings.platformFees)}
+                                </div>
+                                <div className="text-xs text-[var(--muted)] mt-2">
+                                    {earnings.platformFeePercent}% of gross revenue
+                                </div>
+                            </motion.div>
                         </div>
-                        <div className="mt-6 p-4 rounded-xl bg-white/[0.02] border border-white/5">
-                            <p className="text-xs text-[var(--muted)]">
-                                You keep 70% of all earnings. Platform fee covers hosting, payments, and support.
+
+                        {/* Revenue Split Visualization */}
+                        <div className="glass p-6 rounded-2xl mb-8">
+                            <h2 className="font-semibold mb-4">Revenue Split</h2>
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="flex-1 h-6 bg-[var(--card-bg)] rounded-full overflow-hidden flex">
+                                    <motion.div
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${100 - earnings.platformFeePercent}%` }}
+                                        transition={{ duration: 0.8, ease: "easeOut" }}
+                                        className="h-full bg-gradient-to-r from-green-500 to-emerald-400"
+                                    />
+                                    <motion.div
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${earnings.platformFeePercent}%` }}
+                                        transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
+                                        className="h-full bg-gradient-to-r from-gray-500 to-gray-600"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                                    <span className="text-green-400">
+                                        You earn: {100 - earnings.platformFeePercent}%
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded-full bg-gray-500" />
+                                    <span className="text-[var(--muted)]">
+                                        Platform: {earnings.platformFeePercent}%
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Sales History */}
+                        <div>
+                            <h2 className="text-xl font-semibold mb-4">Sales History</h2>
+
+                            {earnings.earnings.length === 0 ? (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="text-center py-16 glass rounded-2xl"
+                                >
+                                    <div className="w-20 h-20 rounded-full bg-[var(--card-bg)] flex items-center justify-center mx-auto mb-6">
+                                        <span className="text-4xl">💸</span>
+                                    </div>
+                                    <h3 className="text-xl font-semibold mb-2">No sales yet</h3>
+                                    <p className="text-[var(--muted)] mb-6">
+                                        Create premium blogs to start earning
+                                    </p>
+                                    <Link
+                                        href="/write"
+                                        className="inline-block px-6 py-3 bg-[var(--accent)] text-white rounded-full font-medium hover:opacity-90 transition-opacity"
+                                    >
+                                        Write a Premium Blog
+                                    </Link>
+                                </motion.div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {earnings.earnings.map((item, index) => (
+                                        <motion.div
+                                            key={item.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.05 }}
+                                            className="glass p-5 rounded-xl flex items-center justify-between"
+                                        >
+                                            <div className="flex-1 min-w-0">
+                                                <Link
+                                                    href={`/blog/${item.blog.slug}`}
+                                                    className="font-medium hover:text-[var(--accent)] transition-colors block truncate"
+                                                >
+                                                    {item.blog.title}
+                                                </Link>
+                                                <div className="text-sm text-[var(--muted)] mt-1">
+                                                    Purchased by <span className="font-medium">{item.buyer.name || item.buyer.username || 'Anonymous'}</span>
+                                                    <span className="mx-2">•</span>
+                                                    {formatDate(item.createdAt)}
+                                                </div>
+                                            </div>
+                                            <div className="text-right ml-4 shrink-0">
+                                                <div className="text-green-400 font-bold text-lg">
+                                                    +{formatCurrency(item.netAmount)}
+                                                </div>
+                                                <div className="text-xs text-[var(--muted)]">
+                                                    Gross: {formatCurrency(item.grossAmount)}
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Payout Info */}
+                        <div className="mt-8 p-4 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/20">
+                            <p className="text-sm text-[var(--muted)]">
+                                <strong className="text-[var(--foreground)]">💡 Payout Info:</strong> Earnings are credited to your wallet after each sale.
+                                Minimum withdrawal amount is ₹500. Contact support for payout requests.
                             </p>
                         </div>
-                    </div>
-                </div>
-
-                {/* Recent Transactions */}
-                <div className="mt-8 glass-subtle rounded-2xl p-6">
-                    <h2 className="text-lg font-semibold mb-6">Recent Transactions</h2>
-                    <div className="space-y-3">
-                        {earnings.transactions.map((tx) => (
-                            <TransactionRow key={tx.id} transaction={tx} />
-                        ))}
-                    </div>
-                </div>
-
-                {/* Withdraw Modal */}
-                {showWithdrawModal && (
-                    <WithdrawModal
-                        balance={earnings.balance}
-                        onClose={() => setShowWithdrawModal(false)}
-                    />
+                    </>
                 )}
             </div>
         </div>
-    );
-}
-
-function StatCard({
-    label,
-    value,
-    change,
-    subtitle,
-    action,
-}: {
-    label: string;
-    value: string;
-    change?: number;
-    subtitle?: string;
-    action?: React.ReactNode;
-}) {
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass-subtle rounded-2xl p-6"
-        >
-            <p className="text-sm text-[var(--muted)] mb-2">{label}</p>
-            <p className="text-3xl font-bold">{value}</p>
-            {change !== undefined && (
-                <p className={`text-sm mt-2 ${change >= 0 ? "text-green-400" : "text-red-400"}`}>
-                    {change >= 0 ? "↑" : "↓"} {Math.abs(change)}% vs last month
-                </p>
-            )}
-            {subtitle && (
-                <p className="text-xs text-white/30 mt-2">{subtitle}</p>
-            )}
-            {action && <div className="mt-4">{action}</div>}
-        </motion.div>
-    );
-}
-
-function SplitRow({ label, value, color }: { label: string; value: number; color: string }) {
-    return (
-        <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-                <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: color.includes("var") ? `var(--accent)` : `rgba(255,255,255,0.3)` }}
-                />
-                <span className="text-sm text-[var(--muted)]">{label}</span>
-            </div>
-            <span className="font-medium">₹{value.toLocaleString()}</span>
-        </div>
-    );
-}
-
-function TransactionRow({ transaction }: { transaction: Transaction }) {
-    const icons = {
-        earning: "💰",
-        withdrawal: "🏦",
-        tip: "❤️",
-    };
-
-    return (
-        <div className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
-            <div className="flex items-center gap-4">
-                <span className="text-xl">{icons[transaction.type]}</span>
-                <div>
-                    <p className="font-medium">{transaction.description}</p>
-                    <p className="text-sm text-[var(--muted)]">{transaction.date}</p>
-                </div>
-            </div>
-            <div className="text-right">
-                <p className={`font-medium ${transaction.amount > 0 ? "text-green-400" : "text-red-400"}`}>
-                    {transaction.amount > 0 ? "+" : ""}₹{Math.abs(transaction.amount).toLocaleString()}
-                </p>
-                {transaction.status === "pending" && (
-                    <span className="text-xs text-yellow-400">Pending</span>
-                )}
-            </div>
-        </div>
-    );
-}
-
-function WithdrawModal({ balance, onClose }: { balance: number; onClose: () => void }) {
-    const [amount, setAmount] = useState("");
-    const [isProcessing, setIsProcessing] = useState(false);
-
-    const handleWithdraw = async () => {
-        setIsProcessing(true);
-        // TODO: Implement actual withdrawal
-        await new Promise((r) => setTimeout(r, 2000));
-        setIsProcessing(false);
-        onClose();
-    };
-
-    return (
-        <>
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={onClose}
-                className="fixed inset-0 bg-black/50 z-40"
-            />
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md z-50"
-            >
-                <div className="glass p-6 rounded-2xl m-4">
-                    <h3 className="text-xl font-semibold mb-2">Withdraw Funds</h3>
-                    <p className="text-[var(--muted)] text-sm mb-6">
-                        Available: ₹{balance.toLocaleString()}
-                    </p>
-
-                    <div className="mb-6">
-                        <label className="text-sm text-[var(--muted)] block mb-2">Amount</label>
-                        <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]">₹</span>
-                            <input
-                                type="number"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                placeholder="0"
-                                max={balance}
-                                className="w-full pl-8 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xl font-medium focus:outline-none focus:border-[var(--accent)]"
-                            />
-                        </div>
-                        <button
-                            onClick={() => setAmount(balance.toString())}
-                            className="mt-2 text-sm text-[var(--accent)] hover:underline"
-                        >
-                            Withdraw all
-                        </button>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 mb-6">
-                        <p className="text-xs text-[var(--muted)]">
-                            Withdrawals are processed within 2-3 business days to your linked bank account.
-                        </p>
-                    </div>
-
-                    <div className="flex gap-3">
-                        <Button variant="ghost" onClick={onClose} className="flex-1">
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={handleWithdraw}
-                            disabled={!amount || Number(amount) <= 0 || Number(amount) > balance || isProcessing}
-                            className="flex-1"
-                        >
-                            {isProcessing ? "Processing..." : "Withdraw"}
-                        </Button>
-                    </div>
-                </div>
-            </motion.div>
-        </>
     );
 }
