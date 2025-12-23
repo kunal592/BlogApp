@@ -16,7 +16,7 @@ export const mediaService = {
         formData.append('file', file);
 
         const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'}/media/upload`,
+            `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/media/upload`,
             {
                 method: 'POST',
                 body: formData,

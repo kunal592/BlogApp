@@ -1,36 +1,54 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { TipTapEditor, MediaUpload } from "@/components/editor";
-import { Input, Button } from "@/components/ui";
+import { Button } from "@/components/ui";
+import { blogService } from "@/services/blog.service";
+import { mediaService } from "@/services/media.service";
 
-type SaveStatus = "saved" | "saving" | "unsaved";
+type SaveStatus = "saved" | "saving" | "unsaved" | "error";
 
 export default function WritePage() {
+    const router = useRouter();
+    const [blogId, setBlogId] = useState<string | null>(null);
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
     const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
     const [showCoverUpload, setShowCoverUpload] = useState(false);
     const [coverImage, setCoverImage] = useState<string | null>(null);
+    const [isPublishing, setIsPublishing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    // Autosave effect
+    // Autosave effect - saves to API after 3 seconds of inactivity
     useEffect(() => {
         if (!title && !content) return;
 
         setSaveStatus("unsaved");
-        const timer = setTimeout(() => {
-            // Simulate autosave
+        const timer = setTimeout(async () => {
             setSaveStatus("saving");
-            setTimeout(() => {
-                // Save to localStorage for now
-                localStorage.setItem("draft", JSON.stringify({ title, content, coverImage }));
+            try {
+                if (blogId) {
+                    // Update existing blog
+                    await blogService.update(blogId, { title, content, coverImage: coverImage || undefined });
+                } else {
+                    // Create new blog
+                    const blog = await blogService.create({ title, content, coverImage: coverImage || undefined });
+                    setBlogId(blog.id);
+                }
                 setSaveStatus("saved");
-            }, 500);
-        }, 2000);
+                setError(null);
+            } catch (err) {
+                setSaveStatus("error");
+                setError(err instanceof Error ? err.message : "Failed to save");
+                // Fallback to localStorage
+                localStorage.setItem("draft", JSON.stringify({ title, content, coverImage }));
+            }
+        }, 3000);
 
         return () => clearTimeout(timer);
-    }, [title, content, coverImage]);
+    }, [title, content, coverImage, blogId]);
 
     // Load draft on mount
     useEffect(() => {
@@ -46,16 +64,70 @@ export default function WritePage() {
     }, []);
 
     const handleCoverUpload = async (file: File): Promise<string> => {
-        // For now, create a local URL (replace with actual R2 upload later)
-        const url = URL.createObjectURL(file);
-        setCoverImage(url);
-        setShowCoverUpload(false);
-        return url;
+        try {
+            // Upload to R2 via backend
+            const url = await mediaService.uploadImage(file);
+            setCoverImage(url);
+            setShowCoverUpload(false);
+            return url;
+        } catch (err) {
+            // Fallback to local URL for preview
+            const url = URL.createObjectURL(file);
+            setCoverImage(url);
+            setShowCoverUpload(false);
+            return url;
+        }
     };
 
-    const handlePublish = () => {
-        // TODO: Implement actual publish
-        console.log("Publishing:", { title, content, coverImage });
+    const handlePreview = () => {
+        // Open preview in new tab with draft data
+        if (blogId) {
+            window.open(`/blog/preview/${blogId}`, '_blank');
+        } else {
+            // Store in sessionStorage for preview
+            sessionStorage.setItem('preview', JSON.stringify({ title, content, coverImage }));
+            window.open('/blog/preview', '_blank');
+        }
+    };
+
+    const handlePublish = async () => {
+        if (!title.trim()) {
+            setError("Please add a title");
+            return;
+        }
+        if (!content.trim()) {
+            setError("Please add some content");
+            return;
+        }
+
+        setIsPublishing(true);
+        setError(null);
+
+        try {
+            let id = blogId;
+
+            // If no blog ID yet, create one first
+            if (!id) {
+                const blog = await blogService.create({ title, content, coverImage: coverImage || undefined });
+                id = blog.id;
+                setBlogId(id);
+            } else {
+                // Save latest changes
+                await blogService.update(id, { title, content, coverImage: coverImage || undefined });
+            }
+
+            // Publish the blog
+            const publishedBlog = await blogService.publish(id);
+
+            // Clear the local draft
+            localStorage.removeItem("draft");
+
+            // Redirect to the published blog
+            router.push(`/blog/${publishedBlog.slug}`);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to publish");
+            setIsPublishing(false);
+        }
     };
 
     return (
@@ -64,20 +136,26 @@ export default function WritePage() {
             <header className="fixed top-16 left-0 right-0 z-30 glass-subtle">
                 <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <span className="text-sm text-[var(--muted)]">
+                        <span className={`text-sm ${saveStatus === "error" ? "text-red-400" : "text-[var(--muted)]"}`}>
                             {saveStatus === "saved" && "✓ Saved"}
                             {saveStatus === "saving" && "Saving..."}
                             {saveStatus === "unsaved" && "Unsaved changes"}
+                            {saveStatus === "error" && "⚠ Save failed"}
                         </span>
+                        {error && (
+                            <span className="text-sm text-red-400">{error}</span>
+                        )}
                     </div>
                     <div className="flex items-center gap-3">
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={handlePreview}>
                             Preview
                         </Button>
                         <Button
                             variant="primary"
                             size="sm"
                             onClick={handlePublish}
+                            disabled={isPublishing || !title.trim()}
+                            isLoading={isPublishing}
                         >
                             Publish
                         </Button>
