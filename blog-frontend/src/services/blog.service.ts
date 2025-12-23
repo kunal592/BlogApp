@@ -150,6 +150,22 @@ export const blogService = {
     },
 
     /**
+     * Get user's bookmarked blogs
+     */
+    async getBookmarks(): Promise<Blog[]> {
+        const response = await api.get<{ data: Blog[] }>('/blogs/bookmarks');
+        return response.data;
+    },
+
+    /**
+     * Get user's liked blogs
+     */
+    async getLiked(): Promise<Blog[]> {
+        const response = await api.get<{ data: Blog[] }>('/blogs/liked');
+        return response.data;
+    },
+
+    /**
      * Record a view
      */
     async recordView(id: string): Promise<void> {

@@ -188,6 +188,20 @@ export function Navbar() {
                                                         📝 My Articles
                                                     </Link>
                                                     <Link
+                                                        href="/dashboard/bookmarks"
+                                                        className="block px-4 py-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
+                                                        onClick={() => setIsUserMenuOpen(false)}
+                                                    >
+                                                        🔖 Bookmarks
+                                                    </Link>
+                                                    <Link
+                                                        href="/dashboard/liked"
+                                                        className="block px-4 py-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
+                                                        onClick={() => setIsUserMenuOpen(false)}
+                                                    >
+                                                        ❤️ Liked
+                                                    </Link>
+                                                    <Link
                                                         href="/dashboard/settings"
                                                         className="block px-4 py-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
                                                         onClick={() => setIsUserMenuOpen(false)}

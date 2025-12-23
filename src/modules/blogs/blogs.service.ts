@@ -804,6 +804,67 @@ export class BlogsService {
     }
 
     /**
+     * Get user's liked blogs
+     */
+    async getLiked(
+        userId: string,
+        page: number = 1,
+        limit: number = 10,
+    ): Promise<PaginatedBlogsDto> {
+        const skip = (page - 1) * limit;
+
+        const [likes, total] = await Promise.all([
+            this.prisma.like.findMany({
+                where: { userId },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit,
+                include: {
+                    blog: {
+                        include: {
+                            author: {
+                                select: {
+                                    id: true,
+                                    username: true,
+                                    name: true,
+                                    avatar: true,
+                                    isVerified: true,
+                                },
+                            },
+                            tags: {
+                                include: {
+                                    tag: { select: { id: true, name: true, slug: true } },
+                                },
+                            },
+                        },
+                    },
+                },
+            }),
+            this.prisma.like.count({ where: { userId } }),
+        ]);
+
+        // Get bookmarks for these blogs
+        const blogIds: string[] = likes.map((l: { blog: { id: string } }) => l.blog.id);
+        const bookmarks = await this.prisma.bookmark.findMany({
+            where: { userId, blogId: { in: blogIds } },
+            select: { blogId: true },
+        });
+        const bookmarkedBlogIds = new Set<string>(bookmarks.map((b: { blogId: string }) => b.blogId));
+
+        return {
+            data: likes
+                .filter((l: { blog: { deletedAt: Date | null; status: string } }) => !l.blog.deletedAt && l.blog.status === 'PUBLISHED')
+                .map((l: { blog: BlogWithAuthorAndTags }) => this.toBlogListItemDto(l.blog, new Set<string>(blogIds), bookmarkedBlogIds)),
+            meta: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+            },
+        };
+    }
+
+    /**
      * Increment view count
      */
     async incrementView(blogId: string): Promise<void> {

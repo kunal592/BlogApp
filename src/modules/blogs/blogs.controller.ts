@@ -126,6 +126,28 @@ export class BlogsController {
     }
 
     /**
+     * GET /blogs/liked
+     * Get user's liked blogs
+     */
+    @Get('liked')
+    @HttpCode(HttpStatus.OK)
+    @ApiCookieAuth('access_token')
+    @ApiBearerAuth('bearer')
+    @ApiOperation({
+        summary: 'Get liked blogs',
+        description: 'Get all blogs liked by current user.',
+    })
+    @ApiResponse({ status: 200, description: 'Liked blogs retrieved', type: PaginatedBlogsDto })
+    @ApiResponse({ status: 401, description: 'Not authenticated' })
+    async getLiked(
+        @CurrentUser('id') userId: string,
+        @Query('page') page?: number,
+        @Query('limit') limit?: number,
+    ): Promise<PaginatedBlogsDto> {
+        return this.blogsService.getLiked(userId, page, limit);
+    }
+
+    /**
      * GET /blogs/author/:username
      * Get published blogs by author
      */
